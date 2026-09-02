@@ -79,11 +79,12 @@ Estas reglas se aplican a **toda la capa C++ de ABDScope** (`Source/Core/`):
 ### D. Reglas de Calidad WebUI y Frontend (de ABDSKILLS & Skill JUCE)
 
 1. **Vanilla CSS & Tokens Obligatorios**: Sin frameworks CSS pesados (Tailwind/Bootstrap). Toda propiedad visual debe usar CSS Custom Properties (`--scope-bg`, `--scope-grid`, `--color-accent`) heredables del host. Prohibido hardcodear colores HEX/RGB en el código de componentes.
-2. **100% English en Código Técnico**: Todos los identificadores técnicos, nombres de variables, propiedades, eventos, clases y schemas (`ScopeDataFrame`) deben estar en inglés técnico estricto.
-3. **Cero `console.log` en Producción**: Toda traza de depuración debe encapsularse en un logger con flags de depuración o eliminarse para builds de producción.
-4. **Throttling & High-Frequency Safety**: Limitar eventos de alta frecuencia con `requestAnimationFrame`. No enviar más de un mensaje por frame al bridge IPC.
-5. **Zero-Copy Heap & Garbage Collector Avoidance**: Reutilizar instancias de `Float32Array` y `Uint8Array`. Prohibido instanciar nuevos TypedArrays en cada ciclo de render o audio callback.
-6. **Ciclo de Vida y Limpieza Explícita (`destroy`)**: Todo componente o renderer debe implementar `destroy()` que desconecte `AnalyserNode`, cancele `requestAnimationFrame`, desconecte `ResizeObserver`, remueva listeners del DOM y anule referencias a TypedArrays.
+2. **Iconografía Monocromática Vectorial (Cero Emojis)**: Prohibido terminantemente el uso de emojis Unicode (📷, ⚙️, 🔴, ❌) en botones, controles o badges de telemetría. Usar iconos vectoriales SVG monocromáticos configurados con `currentColor` / variables CSS o formas vectoriales CSS puras, centralizados en `ABDSharedAssets/icons/`.
+3. **100% English en Código Técnico**: Todos los identificadores técnicos, nombres de variables, propiedades, eventos, clases y schemas (`ScopeDataFrame`) deben estar en inglés técnico estricto.
+4. **Cero `console.log` en Producción**: Toda traza de depuración debe encapsularse en un logger con flags de depuración o eliminarse para builds de producción.
+5. **Throttling & High-Frequency Safety**: Limitar eventos de alta frecuencia con `requestAnimationFrame`. No enviar más de un mensaje por frame al bridge IPC.
+6. **Zero-Copy Heap & Garbage Collector Avoidance**: Reutilizar instancias de `Float32Array` y `Uint8Array`. Prohibido instanciar nuevos TypedArrays en cada ciclo de render o audio callback.
+7. **Ciclo de Vida y Limpieza Explícita (`destroy`)**: Todo componente o renderer debe implementar `destroy()` que desconecte `AnalyserNode`, cancele `requestAnimationFrame`, desconecte `ResizeObserver`, remueva listeners del DOM y anule referencias a TypedArrays.
 
 ### E. Reglas de Testing y Verificación
 
