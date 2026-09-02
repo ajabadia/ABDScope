@@ -190,6 +190,18 @@
 
 ---
 
+### FASE 6: Mejoras Futuras & Evolución (Post-V1)
+> **Objetivo:** Funcionalidades avanzadas y extensiones para análisis multi-canal.
+
+- [ ] **6.1 Modo Multi-Lane / Multi-Canal Apilado:**
+  - Posibilidad de apilar varias líneas de visualización (carriles independientes) en modo embebido para comparar simultáneamente múltiples sondas (ej. Osc 1, Osc 2, Filtro y Salida Master).
+- [ ] **6.2 Selector de Ventanas FFT (Hann, Blackman-Harris, Flat-Top):**
+  - Configuración de la función de enventanado para análisis espectral de precisión en laboratorio.
+- [ ] **6.3 Modos de Visualización 3D / Isometric Waterfall:**
+  - Cascada espectral en perspectiva tridimensional.
+
+---
+
 ## 🚦 Criterios de Aceptación (Definición de Hecho)
 
 1. **100% Tests Pass:** Toda la batería de pruebas de Vitest (`npm test`) pasa sin errores.

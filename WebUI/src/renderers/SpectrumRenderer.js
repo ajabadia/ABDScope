@@ -21,7 +21,7 @@ export class SpectrumRenderer extends BaseRenderer {
   constructor() {
     super('spectrum');
     this.peakHoldBuffer = null;
-    this.decayRate = 0.05; // ~30 dB/s decay
+    this.decayRate = 0.5; // ~30 dB/s smooth studio ballistic decay
     this.minDb = -96.0;
     this.maxDb = 0.0;
   }
@@ -46,6 +46,7 @@ export class SpectrumRenderer extends BaseRenderer {
     const sampleRate = frame.sampleRate || 44100;
     const nyquist = sampleRate / 2;
     const binWidthHz = nyquist / bins;
+    const decay = options.decayRate ?? this.decayRate;
 
     // Allocate / reuse peak-hold buffer
     if (!this.peakHoldBuffer || this.peakHoldBuffer.length !== w) {
@@ -77,7 +78,7 @@ export class SpectrumRenderer extends BaseRenderer {
       if (db >= peak) {
         peak = db;
       } else {
-        peak = Math.max(minDb, peak - this.decayRate);
+        peak = Math.max(minDb, peak - decay);
       }
       this.peakHoldBuffer[x] = peak;
 
@@ -91,16 +92,17 @@ export class SpectrumRenderer extends BaseRenderer {
     ctx.lineTo(w, h);
     ctx.closePath();
 
-    // 4. Fill Translucent Gradient
+    // 4. Fill Translucent Gradient (Theme Adaptive)
+    const strokeColor = this.resolveColor(options.strokeColor, '#00e676');
     const gradient = ctx.createLinearGradient(0, 0, 0, h);
-    gradient.addColorStop(0, options.fillTop || 'rgba(0, 230, 118, 0.45)');
-    gradient.addColorStop(0.6, options.fillMid || 'rgba(0, 195, 255, 0.20)');
-    gradient.addColorStop(1, 'rgba(0, 195, 255, 0.0)');
+    gradient.addColorStop(0, strokeColor + '60');
+    gradient.addColorStop(0.6, strokeColor + '20');
+    gradient.addColorStop(1, 'rgba(0, 0, 0, 0.0)');
     ctx.fillStyle = gradient;
     ctx.fill();
 
     // 5. Stroke Spectrum Curve
-    ctx.strokeStyle = this.resolveColor(options.strokeColor, '#00e676');
+    ctx.strokeStyle = strokeColor;
     ctx.lineWidth = 1.8;
     ctx.stroke();
 

@@ -6,20 +6,68 @@
  */
 
 :root {
-  --scope-bg: var(--color-panel-bg, #080c14);
-  --scope-surface: var(--color-panel-surface, #0f1622);
-  --scope-surface-elevated: var(--color-panel-surface-elevated, #162234);
-  --scope-border: var(--color-panel-border, rgba(0, 195, 255, 0.2));
-  --scope-border-strong: var(--color-panel-border-strong, rgba(0, 195, 255, 0.45));
-  --scope-accent: var(--color-accent, #00c3ff);
-  --scope-accent-hover: var(--color-accent-hover, #38d3ff);
-  --scope-trace-l: var(--color-accent, #00c3ff);
+  --scope-bg: #080c14;
+  --scope-surface: #0f1622;
+  --scope-surface-elevated: #162234;
+  --scope-border: rgba(0, 195, 255, 0.25);
+  --scope-border-strong: rgba(0, 195, 255, 0.5);
+  --scope-accent: #00c3ff;
+  --scope-accent-hover: #38d3ff;
+  --scope-trace-l: #00c3ff;
   --scope-trace-r: #ff007f;
-  --scope-spectrum: var(--color-accent, #00e676);
+  --scope-spectrum: #00e676;
   --scope-grid: rgba(255, 255, 255, 0.07);
-  --scope-text-main: var(--color-text-main, #e8f4fc);
-  --scope-text-muted: var(--color-text-muted, #7e9bb5);
-  --scope-font-lcd: var(--font-lcd, 'Courier New', 'Roboto Mono', monospace);
+  --scope-text-main: #e8f4fc;
+  --scope-text-muted: #7e9bb5;
+  --scope-font-lcd: 'Courier New', 'Roboto Mono', monospace;
+}
+
+[data-theme="ms2000"],
+.theme-ms2000 {
+  --scope-bg: #080c14;
+  --scope-surface: #0d1522;
+  --scope-accent: #00c3ff;
+  --scope-accent-hover: #38d3ff;
+  --scope-trace-l: #00c3ff;
+  --scope-trace-r: #ff007f;
+  --scope-spectrum: #00e676;
+  --scope-border: rgba(0, 195, 255, 0.25);
+}
+
+[data-theme="cz101"],
+.theme-cz101 {
+  --scope-bg: #12080a;
+  --scope-surface: #1e0d11;
+  --scope-accent: #ff3344;
+  --scope-accent-hover: #ff5566;
+  --scope-trace-l: #ff3344;
+  --scope-trace-r: #00c3ff;
+  --scope-spectrum: #ff3344;
+  --scope-border: rgba(255, 51, 68, 0.3);
+}
+
+[data-theme="deepmind"],
+.theme-deepmind {
+  --scope-bg: #140e06;
+  --scope-surface: #22170a;
+  --scope-accent: #ffaa00;
+  --scope-accent-hover: #ffbb33;
+  --scope-trace-l: #ffaa00;
+  --scope-trace-r: #00e676;
+  --scope-spectrum: #ffaa00;
+  --scope-border: rgba(255, 170, 0, 0.3);
+}
+
+[data-theme="audiolab"],
+.theme-audiolab {
+  --scope-bg: #06120a;
+  --scope-surface: #0d1e12;
+  --scope-accent: #00e676;
+  --scope-accent-hover: #33eb91;
+  --scope-trace-l: #00e676;
+  --scope-trace-r: #00c3ff;
+  --scope-spectrum: #00e676;
+  --scope-border: rgba(0, 230, 118, 0.3);
 }
 
 /* Root Component Frame */

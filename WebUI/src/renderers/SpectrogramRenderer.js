@@ -1,8 +1,8 @@
 /**
  * ABDScope Spectrogram / Waterfall Renderer
  * ==========================================
- * Time-Frequency 2D density waterfall cascade using logarithmic frequency mapping
- * and a high-performance scrolling ImageData heat map.
+ * Time-Frequency 2D density waterfall cascade using logarithmic frequency mapping,
+ * scrolling ImageData heat map, and selectable color palettes (Inferno, Viridis, CRT, Cyberpunk).
  *
  * Constraints:
  * - Zero allocations in steady-state render() loops.
@@ -24,6 +24,7 @@ export class SpectrogramRenderer extends BaseRenderer {
     this.offscreenCtx = null;
     this.minDb = -96.0;
     this.maxDb = 0.0;
+    this.palette = 'inferno'; // 'inferno' | 'viridis' | 'crt' | 'cyberpunk'
   }
 
   init(canvas, options = {}) {
@@ -59,12 +60,13 @@ export class SpectrogramRenderer extends BaseRenderer {
     const h = this.height;
     const sampleRate = frame.sampleRate || 44100;
     const binWidthHz = (sampleRate / 2) / bins;
+    const pal = options.palette || this.palette;
 
-    // 1. Scroll previous offscreen canvas 2px down
+    // 1. Scroll previous offscreen canvas down
     const scrollSpeed = options.speed || 2;
     this.offscreenCtx.drawImage(this.offscreenCanvas, 0, 0, w, h - scrollSpeed, 0, scrollSpeed, w, h - scrollSpeed);
 
-    // 2. Draw new top line (1 slice)
+    // 2. Draw new top line
     const imgData = this.offscreenCtx.createImageData(w, scrollSpeed);
     const data = imgData.data;
     const minDb = options.minDb ?? this.minDb;
@@ -81,11 +83,25 @@ export class SpectrogramRenderer extends BaseRenderer {
       if (db > maxDb) db = maxDb;
 
       const normY = (db - minDb) / dbRange; // 0.0 to 1.0 intensity
+      let r = 0, g = 0, b = 0;
 
-      // Inferno / Plasma style color gradient
-      const r = Math.min(255, Math.floor(normY * normY * 300));
-      const g = Math.min(255, Math.floor(Math.sin(normY * Math.PI) * 230));
-      const b = Math.min(255, Math.floor((1.0 - normY) * normY * 350 + (normY > 0.8 ? 200 : 0)));
+      if (pal === 'viridis') {
+        r = Math.min(255, Math.floor(normY > 0.6 ? (normY - 0.6) * 600 : 30 * normY));
+        g = Math.min(255, Math.floor(Math.sin(normY * Math.PI) * 255));
+        b = Math.min(255, Math.floor((1.0 - normY) * 200 + normY * 100));
+      } else if (pal === 'crt') {
+        r = Math.min(255, Math.floor(normY > 0.8 ? (normY - 0.8) * 1000 : 0));
+        g = Math.min(255, Math.floor(normY * 255));
+        b = Math.min(255, Math.floor(normY > 0.9 ? (normY - 0.9) * 1500 : 0));
+      } else if (pal === 'cyberpunk') {
+        r = Math.min(255, Math.floor(normY > 0.5 ? (normY - 0.5) * 450 : 0));
+        g = Math.min(255, Math.floor(normY * 200));
+        b = Math.min(255, Math.floor(Math.sin(normY * Math.PI * 0.5) * 255));
+      } else { // default: inferno / plasma
+        r = Math.min(255, Math.floor(normY * normY * 300));
+        g = Math.min(255, Math.floor(Math.sin(normY * Math.PI) * 230));
+        b = Math.min(255, Math.floor((1.0 - normY) * normY * 350 + (normY > 0.8 ? 200 : 0)));
+      }
 
       for (let y = 0; y < scrollSpeed; ++y) {
         const offset = (y * w + x) * 4;

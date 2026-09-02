@@ -1,16 +1,8 @@
-cmake_minimum_required(VERSION 3.20)
-
 project(ABDScopeCore LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
-
-if(MSVC)
-  target_compile_options(ABDScopeCore PRIVATE /W4 /permissive- /Zc:__cplusplus /Zc:inline)
-else()
-  target_compile_options(ABDScopeCore PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
-endif()
 
 add_library(ABDScopeCore INTERFACE)
 
@@ -31,6 +23,11 @@ target_sources(ABDScopeCore INTERFACE
 
 target_compile_definitions(ABDScopeCore INTERFACE
   ABD_SCOPE_EXPORTS
+)
+
+target_compile_options(ABDScopeCore INTERFACE
+  $<$<CXX_COMPILER_ID:MSVC>:/W4:/permissive-:/Zc:__cplusplus:/Zc:inline>
+  $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-Wall:-Wextra:-Wpedantic:-Wconversion:-Wshadow>
 )
 
 if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
@@ -83,6 +80,13 @@ install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/JUCE/
   FILES_MATCHING PATTERN "*.h"
 )
 
-enable_testing()
-
-add_subdirectory(tests)
+# Tests - only enable if GTest is available
+if(BUILD_TESTING)
+  find_package(GTest QUIET)
+  if(GTest_FOUND)
+    enable_testing()
+    add_subdirectory(tests)
+  else()
+    message(WARNING "GTest not found - unit tests disabled. Install GTest to enable.")
+  endif()
+endif()

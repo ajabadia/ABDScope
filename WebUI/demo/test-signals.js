@@ -1,7 +1,7 @@
 /**
  * ABDScope Standalone Test Signal Generator
  * =========================================
- * Generates synthetic tones (Sine, Saw, Square, Triangle, Noise, FM, Mic)
+ * Generates synthetic tones (Sine, Saw, Square, Triangle, Noise, FM, Mic, Stereo Spread)
  * and simulates C++ Bridge IPC packets for offline testing.
  */
 
@@ -11,22 +11,25 @@ export class TestSignalGenerator {
     this.masterGain = null;
     this.analyser = null;
     this.osc = null;
+    this.oscR = null;
     this.fmOsc = null;
     this.fmGain = null;
     this.noiseNode = null;
     this.micStream = null;
     this.micSource = null;
+    this.merger = null;
 
     this.waveform = 'sine';
     this.frequency = 440;
     this.level = 0.5;
     this.fmAmount = 0;
+    this.stereoPhaseDeg = 0; // 0 = mono (+1.0), 90 = wide (0.0), 180 = anti-phase (-1.0)
   }
 
   async init() {
     if (!this.audioCtx) {
-      const AudioContext = window.AudioContext || window.webkitAudioContext;
-      this.audioCtx = new AudioContext();
+      const AudioCtxClass = window.AudioContext || window.webkitAudioContext;
+      this.audioCtx = new AudioCtxClass();
     }
     if (this.audioCtx.state === 'suspended') {
       await this.audioCtx.resume();
@@ -37,7 +40,7 @@ export class TestSignalGenerator {
 
     this.analyser = this.audioCtx.createAnalyser();
     this.analyser.fftSize = 2048;
-    this.analyser.smoothingTimeConstant = 0.4;
+    this.analyser.smoothingTimeConstant = 0.3;
 
     this.masterGain.connect(this.analyser);
     this.masterGain.connect(this.audioCtx.destination);
@@ -65,7 +68,7 @@ export class TestSignalGenerator {
       this.fmOsc = this.audioCtx.createOscillator();
       this.fmGain = this.audioCtx.createGain();
       this.fmOsc.frequency.setValueAtTime(this.frequency * 2, t);
-      this.fmGain.gain.setValueAtTime(this.fmAmount * 500, t);
+      this.fmGain.gain.setValueAtTime(this.fmAmount * 400, t);
       this.fmOsc.connect(this.fmGain);
       this.fmGain.connect(this.osc.frequency);
       this.fmOsc.start();
@@ -92,13 +95,11 @@ export class TestSignalGenerator {
 
   async startMic() {
     this._stopAllSources();
-    if (!navigator.mediaDevices?.getUserMedia) {
-      alert('Microphone API not supported on this browser');
-      return;
-    }
+    if (!navigator.mediaDevices?.getUserMedia) return;
+
     this.micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
     this.micSource = this.audioCtx.createMediaStreamSource(this.micStream);
-    this.micSource.connect(this.analyser);
+    this.micSource.connect(this.masterGain);
   }
 
   _stopAllSources() {
@@ -151,8 +152,12 @@ export class TestSignalGenerator {
     this._startOscillator();
   }
 
+  setStereoPhase(deg) {
+    this.stereoPhaseDeg = parseFloat(deg) || 0;
+  }
+
   /**
-   * Helper to simulate a streaming C++ IPC packet.
+   * Helper to simulate a streaming C++ IPC packet with real stereo phase offset.
    * @param {number} [timeMs] - Elapsed time
    * @returns {Object} Raw packet ready for scope.pushFrame()
    */
@@ -164,11 +169,23 @@ export class TestSignalGenerator {
 
     const freq = this.frequency;
     const tSec = timeMs * 0.001;
+    const rad = (this.stereoPhaseDeg * Math.PI) / 180.0;
 
     for (let i = 0; i < numSamples; ++i) {
       const phase = 2 * Math.PI * freq * ((i / sampleRate) + tSec);
-      timeDataL[i] = this.level * Math.sin(phase);
-      timeDataR[i] = this.level * Math.cos(phase); // Quadrature stereo
+      let valL = Math.sin(phase);
+      let valR = Math.sin(phase + rad);
+
+      if (this.waveform === 'sawtooth') {
+        valL = 2 * ((phase / (2 * Math.PI)) % 1) - 1;
+        valR = 2 * (((phase + rad) / (2 * Math.PI)) % 1) - 1;
+      } else if (this.waveform === 'square') {
+        valL = Math.sin(phase) >= 0 ? 0.9 : -0.9;
+        valR = Math.sin(phase + rad) >= 0 ? 0.9 : -0.9;
+      }
+
+      timeDataL[i] = this.level * valL;
+      timeDataR[i] = this.level * valR;
     }
 
     return {
@@ -181,7 +198,7 @@ export class TestSignalGenerator {
       rmsR: this.level * 0.7071,
       peakL: this.level,
       peakR: this.level,
-      phaseCorrelation: 0.0
+      phaseCorrelation: Math.cos(rad)
     };
   }
 }
