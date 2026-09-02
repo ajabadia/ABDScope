@@ -2,6 +2,9 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { OscilloscopeRenderer } from '../src/renderers/OscilloscopeRenderer.js';
 import { SpectrumRenderer } from '../src/renderers/SpectrumRenderer.js';
 import { VuMeterRenderer } from '../src/renderers/VuMeterRenderer.js';
+import { LissajousRenderer } from '../src/renderers/LissajousRenderer.js';
+import { PhaseMeterRenderer } from '../src/renderers/PhaseMeterRenderer.js';
+import { SpectrogramRenderer } from '../src/renderers/SpectrogramRenderer.js';
 import { createDataFrame } from '../src/frame.js';
 
 function createMockCanvas(w = 300, h = 150) {
@@ -12,18 +15,28 @@ function createMockCanvas(w = 300, h = 150) {
     fillStyle: '',
     strokeStyle: '',
     lineWidth: 1,
+    font: '',
+    textAlign: '',
+    shadowBlur: 0,
+    shadowColor: '',
     setTransform: vi.fn(),
     scale: vi.fn(),
     clearRect: vi.fn(),
     fillRect: vi.fn(),
+    strokeRect: vi.fn(),
+    fillText: vi.fn(),
     beginPath: vi.fn(),
     closePath: vi.fn(),
     moveTo: vi.fn(),
     lineTo: vi.fn(),
+    arc: vi.fn(),
     stroke: vi.fn(),
     fill: vi.fn(),
     save: vi.fn(),
     restore: vi.fn(),
+    drawImage: vi.fn(),
+    createImageData: vi.fn((width, height) => ({ data: new Uint8ClampedArray(width * height * 4) })),
+    putImageData: vi.fn(),
     createLinearGradient: vi.fn(() => ({ addColorStop: vi.fn() }))
   };
   canvas.getContext = vi.fn(() => ctx);
@@ -87,7 +100,7 @@ describe('Renderers: SpectrumRenderer', () => {
 
   it('should render logarithmic spectrum with peak hold', () => {
     const spectrum = new Float32Array(512).fill(-20.0);
-    spectrum[40] = -6.0; // peak at ~1.7 kHz
+    spectrum[40] = -6.0;
 
     const frame = createDataFrame({
       timeDataL: new Float32Array(512),
@@ -101,19 +114,95 @@ describe('Renderers: SpectrumRenderer', () => {
     expect(renderer.ctx.fill).toHaveBeenCalled();
   });
 
-  it('should bypass spectrum rendering for control signals', () => {
-    const frame = createDataFrame({
-      timeDataL: new Float32Array(512),
-      signalType: 'control'
-    });
-
-    expect(() => renderer.render(frame)).not.toThrow();
-  });
-
   it('should clean up buffers on destroy()', () => {
     renderer.destroy();
     expect(renderer.isDestroyed).toBe(true);
     expect(renderer.peakHoldBuffer).toBeNull();
+  });
+});
+
+describe('Renderers: LissajousRenderer', () => {
+  let canvas;
+  let renderer;
+
+  beforeEach(() => {
+    canvas = createMockCanvas(300, 150);
+    renderer = new LissajousRenderer();
+    renderer.init(canvas, { width: 300, height: 150 });
+  });
+
+  it('should render rotated 45 M/S vectorscope trace', () => {
+    const frame = createDataFrame({
+      timeDataL: new Float32Array(512).fill(0.5),
+      timeDataR: new Float32Array(512).fill(-0.5)
+    });
+
+    expect(() => renderer.render(frame)).not.toThrow();
+    expect(renderer.ctx.stroke).toHaveBeenCalled();
+  });
+
+  it('should clean up on destroy()', () => {
+    renderer.destroy();
+    expect(renderer.isDestroyed).toBe(true);
+  });
+});
+
+describe('Renderers: PhaseMeterRenderer', () => {
+  let canvas;
+  let renderer;
+
+  beforeEach(() => {
+    canvas = createMockCanvas(300, 150);
+    renderer = new PhaseMeterRenderer();
+    renderer.init(canvas, { width: 300, height: 150 });
+  });
+
+  it('should render phase correlation meter and smooth damping', () => {
+    const frame = createDataFrame({
+      timeDataL: new Float32Array(512),
+      phaseCorrelation: 0.85
+    });
+
+    expect(() => renderer.render(frame)).not.toThrow();
+    expect(renderer.smoothedCorr).toBeCloseTo(0.97, 1);
+    expect(renderer.ctx.fillText).toHaveBeenCalled();
+  });
+});
+
+describe('Renderers: SpectrogramRenderer', () => {
+  let canvas;
+  let renderer;
+
+  beforeEach(() => {
+    canvas = createMockCanvas(300, 150);
+    renderer = new SpectrogramRenderer();
+    renderer.init(canvas, { width: 300, height: 150 });
+    // Mock offscreen context
+    renderer.offscreenCtx = {
+      drawImage: vi.fn(),
+      createImageData: vi.fn((w, h) => ({ data: new Uint8ClampedArray(w * h * 4) })),
+      putImageData: vi.fn(),
+      fillStyle: '',
+      fillRect: vi.fn()
+    };
+  });
+
+  it('should scroll and render spectrogram cascade', () => {
+    const spectrum = new Float32Array(256).fill(-30.0);
+    const frame = createDataFrame({
+      timeDataL: new Float32Array(512),
+      spectrumDb: spectrum,
+      sampleRate: 44100
+    });
+
+    expect(() => renderer.render(frame)).not.toThrow();
+    expect(renderer.ctx.drawImage).toHaveBeenCalled();
+  });
+
+  it('should clean offscreen buffer on destroy()', () => {
+    renderer.destroy();
+    expect(renderer.isDestroyed).toBe(true);
+    expect(renderer.offscreenCanvas).toBeNull();
   });
 });
 

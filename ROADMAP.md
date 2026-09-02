@@ -121,26 +121,27 @@
 ---
 
 ### FASE 3: Modos Avanzados, Theming & Extras
-> **Objetivo:** Añadir herramientas estéreo avanzadas, sistema de temas dinámicos y funcionalidades de producción.
+> **Objetivo:** Incorporar los modos visuales de alto nivel, personalización de colores/temas y exportación de imágenes.
 
-- [ ] **3.1 `LissajousRenderer.js` (Goniómetro / Vectorescope):**
-  - Mapeo X/Y estéreo con rotación a 45 grados (Mid/Side).
-  - Efecto de persistencia y estela de fósforo analógico mediante acumulación alfa.
+- [x] **3.1 `LissajousRenderer.js` (Goniómetro / Vectorescopio X-Y):**
+  - Mapeo de Lissajous estéreo con rotación de $45^\circ$ ($X = \frac{L-R}{\sqrt{2}}$, $Y = \frac{L+R}{\sqrt{2}}$) para orientación de vectorescope tradicional ($M/S$).
+  - Estela de persistencia de fósforo CRT.
+  - Retícula circular con ejes $M/S$ y $L/R$.
 
-- [ ] **3.2 `PhaseMeterRenderer.js`:**
-  - Medidor de correlación de fase estéreo de -1 a +1 con barra de balance.
+- [x] **3.2 `PhaseMeterRenderer.js`:**
+  - Medidor de correlación de fase estéreo de -1.0 a +1.0 con amortiguamiento balístico y zonas de color (Rojo anti-fase, Amarillo estéreo ancho, Verde mono).
+  - Indicador numérico dinámico.
 
-- [ ] **3.3 Theming y Variables CSS (`src/scope.css`):**
-  - Paletas preconfiguradas: `cyberpunk-neon`, `retro-green-crt`, `amber-classic`, `soundid-nordic`.
+- [x] **3.3 Theming y Variables CSS (`src/scope.css`):**
+  - Paletas preconfiguradas: `ms2000` (cian), `cz101` (rojo), `deepmind` (ámbar), `audiolab` (verde nórdico).
   - Mapeo automático de variables CSS del host (`--scope-bg`, `--scope-trace`, etc.).
   - Fallback a tema oscuro por defecto si no hay variables del host.
 
-- [ ] **3.4 Modo Spectrogram / Waterfall (Cascada):**
-  - Eje X = frecuencia, Eje Y = tiempo (scroll vertical), Color = intensidad (Viridis o Inferno).
-  - Acumula líneas históricas del Spectrum para visualizar evolución temporal de armónicos.
+- [x] **3.4 Modo Spectrogram / Waterfall (Cascada):**
+  - Cascada temporal-frecuencial 2D acumulativa con scroll vertical continuo y paleta de calor plasma/inferno.
 
-- [ ] **3.5 Exportación de captura a imagen/clipboard:**
-  - Botón "📷" para capturar el canvas actual como PNG al portapapeles o descarga.
+- [x] **3.5 Exportación de captura a imagen/clipboard (`src/utils/exportImage.js`):**
+  - Métodos `captureFrame()` (copia PNG al portapapeles) y `downloadFrame()` (descarga directa de PNG).
 
 ---
 
@@ -183,8 +184,9 @@
 - [ ] **5.3 Integración en otros sintetizadores (`ABDCZ101`, `ABDEep`, etc.):**
   - Patrón de copia rápida: junction + import + `createScope()` en 5 líneas.
 
-- [ ] **5.4 Documentación de Integración (`docs/INTEGRATION_GUIDE.md`):**
-  - Guía rápida paso a paso para conectar nuevos sintetizadores en < 5 minutos.
+- [ ] **5.4 Documentación de Integración y Guía de Uso:**
+  - `docs/INTEGRATION_GUIDE.md`: Guía paso a paso para conectar sintetizadores vía NTFS Junction y CMake en < 5 minutos.
+  - `docs/USAGE_GUIDE.md`: Manual de referencia completo de API, opciones de inicialización, temas, flags y control de modos.
 
 ---
 

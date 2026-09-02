@@ -14,6 +14,7 @@ import { FloatingMount } from './mount/FloatingMount.js';
 import { AnalyserInput } from './input/AnalyserInput.js';
 import { PushInput } from './input/PushInput.js';
 import { VuMeterRenderer } from './renderers/VuMeterRenderer.js';
+import { copyCanvasToClipboard, downloadCanvasAsPng } from './utils/exportImage.js';
 
 /**
  * Factory to create an ABDScope instance.
@@ -129,6 +130,14 @@ export function createScope(config = {}) {
         activeInput.start(handleFrame);
       }
       return activeInput.push(rawPacket);
+    },
+
+    async captureFrame() {
+      return mount.canvas ? copyCanvasToClipboard(mount.canvas) : false;
+    },
+
+    downloadFrame(filename) {
+      if (mount.canvas) downloadCanvasAsPng(mount.canvas, filename);
     },
 
     open() {

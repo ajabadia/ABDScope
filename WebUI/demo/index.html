@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ABDScope — Interactive Testbed</title>
+  <title>ABDScope — Studio Audio Visualizer</title>
   <link rel="stylesheet" href="../src/scope.css">
   <link rel="stylesheet" href="demo.css">
 </head>
@@ -12,11 +12,12 @@
   <header class="demo-header">
     <div class="demo-title">
       <span>ABDScope</span>
-      <span class="demo-badge">v0.1.0-alpha • Phase 1 Harness</span>
+      <span class="demo-badge">v0.1.0-alpha • Phase 3 Multi-Mode Suite</span>
     </div>
     <div class="btn-group">
       <button class="demo-btn active" id="btn-mount-embedded">Embedded</button>
       <button class="demo-btn" id="btn-mount-floating">Floating Modal</button>
+      <button class="demo-btn" id="btn-snapshot">📷 Snapshot</button>
       <button class="demo-btn" id="btn-toggle-audio">Start Web Audio</button>
     </div>
   </header>
@@ -58,6 +59,14 @@
         <button class="demo-btn" id="btn-src-bridge">Simulated C++ Bridge</button>
         <button class="demo-btn" id="btn-src-mic">Microphone</button>
       </div>
+
+      <div class="panel-title" style="margin-top: 10px;">Theme Presets</div>
+      <div class="btn-group" id="theme-selector">
+        <button class="demo-btn active" data-theme="ms2000">MS2000 (Cian)</button>
+        <button class="demo-btn" data-theme="cz101">CZ-101 (Red)</button>
+        <button class="demo-btn" data-theme="deepmind">DeepMind (Amber)</button>
+        <button class="demo-btn" data-theme="audiolab">AudioLab (Green)</button>
+      </div>
     </aside>
 
     <!-- Visualizer Viewport -->
@@ -68,6 +77,9 @@
     import { createScope } from '../src/scope.js';
     import { OscilloscopeRenderer } from '../src/renderers/OscilloscopeRenderer.js';
     import { SpectrumRenderer } from '../src/renderers/SpectrumRenderer.js';
+    import { LissajousRenderer } from '../src/renderers/LissajousRenderer.js';
+    import { PhaseMeterRenderer } from '../src/renderers/PhaseMeterRenderer.js';
+    import { SpectrogramRenderer } from '../src/renderers/SpectrogramRenderer.js';
     import { TestSignalGenerator } from './test-signals.js';
 
     const sigGen = new TestSignalGenerator();
@@ -80,17 +92,17 @@
       currentScope = createScope({
         containerId: 'scope-container',
         mountMode,
-        enabledModes: ['oscilloscope', 'spectrum'],
+        enabledModes: ['oscilloscope', 'spectrum', 'lissajous', 'phase', 'spectrogram'],
         defaultMode: 'oscilloscope',
         showFreeze: true,
         showVuMeters: true
       });
 
-      const oscRenderer = new OscilloscopeRenderer();
-      const specRenderer = new SpectrumRenderer();
-
-      currentScope.registerRenderer('oscilloscope', oscRenderer);
-      currentScope.registerRenderer('spectrum', specRenderer);
+      currentScope.registerRenderer('oscilloscope', new OscilloscopeRenderer());
+      currentScope.registerRenderer('spectrum', new SpectrumRenderer());
+      currentScope.registerRenderer('lissajous', new LissajousRenderer());
+      currentScope.registerRenderer('phase', new PhaseMeterRenderer());
+      currentScope.registerRenderer('spectrogram', new SpectrogramRenderer());
 
       if (mountMode === 'floating') {
         currentScope.open();
@@ -106,6 +118,11 @@
       currentScope.connectAnalyser(analyser);
       btnAudio.textContent = 'Audio Active';
       btnAudio.classList.add('active');
+    };
+
+    // Snapshot
+    document.getElementById('btn-snapshot').onclick = () => {
+      currentScope.downloadFrame('abd-scope-capture.png');
     };
 
     // Waveform Buttons
@@ -141,18 +158,28 @@
     };
 
     // Mount Mode Toggle
-    document.getElementById('btn-mount-embedded').onclick = (e) => {
+    document.getElementById('btn-mount-embedded').onclick = () => {
       document.getElementById('btn-mount-embedded').classList.add('active');
       document.getElementById('btn-mount-floating').classList.remove('active');
       initScope('embedded');
       if (sigGen.analyser) currentScope.connectAnalyser(sigGen.analyser);
     };
 
-    document.getElementById('btn-mount-floating').onclick = (e) => {
+    document.getElementById('btn-mount-floating').onclick = () => {
       document.getElementById('btn-mount-floating').classList.add('active');
       document.getElementById('btn-mount-embedded').classList.remove('active');
       initScope('floating');
       if (sigGen.analyser) currentScope.connectAnalyser(sigGen.analyser);
+    };
+
+    // Theme Switcher
+    document.getElementById('theme-selector').onclick = (e) => {
+      const btn = e.target.closest('button');
+      if (btn) {
+        document.querySelectorAll('#theme-selector button').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        document.body.setAttribute('data-theme', btn.dataset.theme);
+      }
     };
 
     // Source Modes
@@ -163,7 +190,7 @@
         t += 33;
         const pkt = sigGen.generateSimulatedBridgePacket(t);
         currentScope.pushFrame(pkt);
-      }, 33); // 30 FPS simulated push
+      }, 33);
     };
 
     document.getElementById('btn-src-webaudio').onclick = async () => {

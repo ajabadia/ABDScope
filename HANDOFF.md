@@ -31,17 +31,21 @@
 ## 3. Current Phase & Next Tasks
 
 - [x] **Phase 1 (Core Engine & Web Base)**: Completed (Scaffold, trigger, frame normalizer, dual inputs, HiDPI base renderer, mounts, demo harness, wire protocol).
-- [x] **Phase 2 (Fundamental Renderers)**: Completed:
-  - [x] **Phase 2.1**: Complete `OscilloscopeRenderer.js` with phosphor trail, stereo overlay, volts/div, and CV signal adaptations.
-  - [x] **Phase 2.2**: Complete `SpectrumRenderer.js` with logarithmic FFT mapping (20 Hz - 20 kHz), gradient filling, and ballistic peak-hold.
-  - [x] **Phase 2.3**: Complete `VuMeterRenderer.js` companion vertical stereo level meters.
+- [x] **Phase 2 (Fundamental Renderers)**: Completed (Oscilloscope, Logarithmic FFT Spectrum, stereo VuMeter).
+- [x] **Phase 3 (Advanced Modes, Theming & Extras)**: Completed:
+  - [x] **Phase 3.1**: `LissajousRenderer.js` (Rotated 45° M/S Goniometer & Vectorscope with CRT phosphor).
+  - [x] **Phase 3.2**: `PhaseMeterRenderer.js` (Ballistic stereo phase correlation meter).
+  - [x] **Phase 3.3**: Theming presets (MS2000, CZ-101, DeepMind, AudioLab).
+  - [x] **Phase 3.4**: `SpectrogramRenderer.js` (Time-frequency waterfall cascade).
+  - [x] **Phase 3.5**: `exportImage.js` (`captureFrame()` to clipboard & `downloadFrame()` to PNG).
 
-### Next Target: FASE 3 (Advanced Modes, Theming & Extras)
-- [ ] **Phase 3.1**: Implement `LissajousRenderer.js` (Goniometer / X-Y Vectorescope rotated 45° M/S with analog phosphor persistence).
-- [ ] **Phase 3.2**: Implement `PhaseMeterRenderer.js` (stereo phase correlation bar).
-- [ ] **Phase 3.3**: Preconfigured theme presets (cyberpunk, phosphor-crt, amber, nordic).
-- [ ] **Phase 3.4**: `SpectrogramRenderer.js` (waterfall time-frequency cascade).
-- [ ] **Phase 3.5**: Export frame capture to clipboard/PNG.
+### Next Target: FASE 4 (C++ Core & JUCE Lock-Free Multi-Tap)
+- [ ] **Phase 4.1**: Implement `Source/Core/ScopeTap.h` & `ScopeDataCollector.h` (C++20 lock-free SPSC multi-tap on-demand buffer).
+- [ ] **Phase 4.2**: Implement `Source/Core/ScopeFrameSerializer.h` (JSON serialization & sample decimation).
+- [ ] **Phase 4.3**: Implement `Source/Core/TriggerDetector.h` (Pure C++ zero-crossing detector).
+- [ ] **Phase 4.4**: Implement `Source/JUCE/JuceScopeComponent.h` (Native JUCE C++ component for ABDAudioLab).
+- [ ] **Phase 4.5**: Create `Source/CMakeLists.txt` (`ABDScope::ABDScopeCore` library target).
+- [ ] **Phase 4.6**: Setup `docs/INTEGRATION_GUIDE.md` & `docs/USAGE_GUIDE.md`.
 
 ---
 
