@@ -1,0 +1,28 @@
+{
+  "name": "@abdsynths/scope",
+  "version": "0.1.0-alpha",
+  "description": "Universal, lock-free, zero-copy audio oscilloscope and spectrum analyzer for ABDSynths plugins & standalone tools",
+  "type": "module",
+  "main": "WebUI/src/scope.js",
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
+  },
+  "keywords": [
+    "audio",
+    "oscilloscope",
+    "spectrum-analyzer",
+    "lissajous",
+    "vectorscope",
+    "juce",
+    "vst3",
+    "dsp",
+    "web-audio"
+  ],
+  "author": "ABDSynths",
+  "license": "Proprietary",
+  "devDependencies": {
+    "vitest": "^2.1.8"
+  }
+}
