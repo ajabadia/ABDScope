@@ -161,6 +161,11 @@ export function createScope(config = {}) {
       if (mount.canvas) downloadCanvasAsPng(mount.canvas, filename);
     },
 
+    setActiveTap(tapId) {
+      if (mount.setActiveTap) mount.setActiveTap(tapId);
+      if (config.onTapChange) config.onTapChange(tapId);
+    },
+
     open() {
       if (mount.open) mount.open();
     },

@@ -1,7 +1,8 @@
 /**
  * ABDScope Floating Modal Mount
  * =============================
- * Renders the scope inside a draggable, resizable, floating desktop modal with close button.
+ * Renders the scope inside a draggable, resizable, floating desktop modal with close button,
+ * multi-mode tab navigation, and multi-tap telemetry selection.
  *
  * Constraints:
  * - Pure view coordinator, under 180 lines of code.
@@ -18,10 +19,12 @@ export class FloatingMount {
     this.onClose = options.onClose || (() => {});
     this.onFreezeToggle = options.onFreezeToggle || (() => {});
     this.onSnapshot = options.onSnapshot || (() => {});
+    this.onTapChange = options.onTapChange || (() => {});
 
     this.widget = null;
     this.canvas = null;
     this.tabsContainer = null;
+    this.tapSelect = null;
     this.resizeObserver = null;
 
     this._createDOM();
@@ -35,6 +38,7 @@ export class FloatingMount {
     this.widget.style.display = 'none';
 
     const enabledModes = this.options.enabledModes || ['oscilloscope', 'spectrum'];
+    const hasTaps = this.options.availableTaps && this.options.availableTaps.length > 1;
     const title = this.options.title || 'OSCILLOSCOPE & SPECTRUM';
 
     this.widget.innerHTML = `
@@ -45,12 +49,23 @@ export class FloatingMount {
             <span class="abd-scope-title-text">${title}</span>
             <span class="abd-scope-note-tag" id="scope-note-tag"></span>
           </div>
-          <button class="abd-scope-close-btn" title="Close Scope" aria-label="Close">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-              <line x1="18" y1="6" x2="6" y2="18"/>
-              <line x1="6" y1="6" x2="18" y2="18"/>
-            </svg>
-          </button>
+          <div style="display: flex; align-items: center; gap: 4px;">
+            ${hasTaps ? `
+              <select class="abd-scope-tap-select" id="scope-tap-select" title="Telemetry Tap">
+                ${this.options.availableTaps.map(t => `
+                  <option value="${t.id}" ${t.id === (this.options.defaultTap || this.options.availableTaps[0].id) ? 'selected' : ''}>
+                    ${t.name || t.id}
+                  </option>
+                `).join('')}
+              </select>
+            ` : ''}
+            <button class="abd-scope-close-btn" title="Close Scope" aria-label="Close">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                <line x1="18" y1="6" x2="6" y2="18"/>
+                <line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
+            </button>
+          </div>
         </div>
         <div class="abd-scope-header-bottom">
           <div class="abd-scope-tabs">
@@ -83,6 +98,7 @@ export class FloatingMount {
     targetContainer.appendChild(this.widget);
     this.canvas = this.widget.querySelector('.abd-scope-canvas');
     this.tabsContainer = this.widget.querySelector('.abd-scope-tabs');
+    this.tapSelect = this.widget.querySelector('#scope-tap-select');
     this.noteTag = this.widget.querySelector('#scope-note-tag');
 
     // Controls
@@ -108,6 +124,12 @@ export class FloatingMount {
       }
     });
 
+    if (this.tapSelect) {
+      this.tapSelect.addEventListener('change', (e) => {
+        this.onTapChange(e.target.value);
+      });
+    }
+
     if (this.options.defaultMode) {
       this.setActiveTab(this.options.defaultMode);
     }
@@ -119,6 +141,12 @@ export class FloatingMount {
     btns.forEach(btn => {
       btn.classList.toggle('active', btn.dataset.mode === modeName);
     });
+  }
+
+  setActiveTap(tapId) {
+    if (this.tapSelect) {
+      this.tapSelect.value = tapId;
+    }
   }
 
   setNoteTag(text) {
@@ -150,7 +178,7 @@ export class FloatingMount {
     };
 
     handle.addEventListener('pointerdown', (e) => {
-      if (e.target.closest('button')) return;
+      if (e.target.closest('button') || e.target.closest('select')) return;
       e.preventDefault();
       startX = e.clientX;
       startY = e.clientY;

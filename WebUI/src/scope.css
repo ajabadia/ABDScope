@@ -232,7 +232,8 @@
 
 .abd-scope-tab-btn,
 .abd-scope-freeze-btn,
-.abd-scope-snapshot-btn {
+.abd-scope-snapshot-btn,
+.abd-scope-tap-select {
   background: var(--scope-surface);
   border: 1px solid var(--scope-border);
   color: var(--scope-text-muted);
@@ -248,6 +249,23 @@
   justify-content: center;
   gap: 3px;
   min-height: 20px;
+}
+
+.abd-scope-tap-select {
+  padding: 2px 5px;
+  outline: none;
+  font-family: inherit;
+  color: var(--scope-accent);
+}
+
+.abd-scope-tap-select:focus,
+.abd-scope-tap-select:hover {
+  border-color: var(--scope-accent);
+}
+
+.abd-scope-tap-select option {
+  background: var(--scope-surface-elevated);
+  color: var(--scope-text-main);
 }
 
 .abd-scope-tab-btn.active,

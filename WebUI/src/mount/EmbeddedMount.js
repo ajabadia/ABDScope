@@ -2,17 +2,13 @@
  * ABDScope Embedded Mount
  * =======================
  * Embeds the scope component directly within a designated DOM container element.
- * Auto-observes container bounds and resizes the backing canvas cleanly.
+ * Auto-observes container bounds, resizes the backing canvas, and handles multi-tap telemetry.
  *
  * Constraints:
- * - Pure view coordinator, under 160 lines of code.
+ * - Pure view coordinator, under 175 lines of code.
  */
 
 export class EmbeddedMount {
-  /**
-   * @param {string|HTMLElement} container - DOM element or element ID
-   * @param {Object} options - Mount configuration
-   */
   constructor(container, options = {}) {
     this.container = typeof container === 'string'
       ? document.getElementById(container)
@@ -27,11 +23,13 @@ export class EmbeddedMount {
     this.onResize = options.onResize || (() => {});
     this.onFreezeToggle = options.onFreezeToggle || (() => {});
     this.onSnapshot = options.onSnapshot || (() => {});
+    this.onTapChange = options.onTapChange || (() => {});
 
     this.wrapper = null;
     this.canvas = null;
     this.vuContainer = null;
     this.tabsContainer = null;
+    this.tapSelect = null;
     this.resizeObserver = null;
     this.isDestroyed = false;
 
@@ -44,7 +42,8 @@ export class EmbeddedMount {
     this.wrapper.className = 'abd-scope-root abd-scope-embedded';
 
     const enabledModes = this.options.enabledModes || ['oscilloscope'];
-    const showHeader = enabledModes.length > 1 || this.options.title || this.options.showFreeze;
+    const hasTaps = this.options.availableTaps && this.options.availableTaps.length > 1;
+    const showHeader = enabledModes.length > 1 || this.options.title || this.options.showFreeze || hasTaps;
 
     let headerHtml = '';
     if (showHeader) {
@@ -56,6 +55,15 @@ export class EmbeddedMount {
             <span class="abd-scope-note-tag" id="scope-note-tag"></span>
           </div>
           <div class="abd-scope-tabs">
+            ${hasTaps ? `
+              <select class="abd-scope-tap-select" id="scope-tap-select" title="Telemetry Tap">
+                ${this.options.availableTaps.map(t => `
+                  <option value="${t.id}" ${t.id === (this.options.defaultTap || this.options.availableTaps[0].id) ? 'selected' : ''}>
+                    ${t.name || t.id}
+                  </option>
+                `).join('')}
+              </select>
+            ` : ''}
             ${enabledModes.length > 1 ? enabledModes.map(m => `
               <button class="abd-scope-tab-btn" data-mode="${m}">${m.toUpperCase()}</button>
             `).join('') : ''}
@@ -85,9 +93,10 @@ export class EmbeddedMount {
     this.canvas = this.wrapper.querySelector('.abd-scope-canvas');
     this.vuContainer = this.wrapper.querySelector('.abd-scope-vu-container');
     this.tabsContainer = this.wrapper.querySelector('.abd-scope-tabs');
+    this.tapSelect = this.wrapper.querySelector('#scope-tap-select');
     this.noteTag = this.wrapper.querySelector('#scope-note-tag');
 
-    // Bind clicks
+    // Bind clicks and tap change
     if (this.tabsContainer) {
       this.tabsContainer.addEventListener('click', (e) => {
         const tabBtn = e.target.closest('.abd-scope-tab-btn');
@@ -108,6 +117,12 @@ export class EmbeddedMount {
           this.onSnapshot();
         }
       });
+
+      if (this.tapSelect) {
+        this.tapSelect.addEventListener('change', (e) => {
+          this.onTapChange(e.target.value);
+        });
+      }
     }
 
     if (this.options.defaultMode) {
@@ -121,6 +136,12 @@ export class EmbeddedMount {
     btns.forEach(btn => {
       btn.classList.toggle('active', btn.dataset.mode === modeName);
     });
+  }
+
+  setActiveTap(tapId) {
+    if (this.tapSelect) {
+      this.tapSelect.value = tapId;
+    }
   }
 
   setNoteTag(text) {
