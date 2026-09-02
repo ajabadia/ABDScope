@@ -27,7 +27,7 @@ export function findZeroCrossing(buffer, options = {}) {
   const fireThreshold = triggerLevel + hysteresis;
 
   const start = Math.max(1, options.searchStart ?? 1);
-  const end = Math.min(len - 1, options.searchEnd ?? Math.floor(len * 0.75));
+  const end = Math.min(len - 1, options.searchEnd ?? Math.floor(len * 0.88));
 
   let isArmed = false;
 

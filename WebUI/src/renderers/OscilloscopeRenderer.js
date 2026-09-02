@@ -2,7 +2,7 @@
  * ABDScope Oscilloscope Renderer
  * ==============================
  * High-performance time-domain visualizer with analog phosphor persistence,
- * sub-sample zero-crossing phase lock, auto-period cycle scaling, and theme colors.
+ * sub-sample zero-crossing phase lock, adaptive octave cycle scaling, and theme colors.
  *
  * Constraints:
  * - Zero allocations in steady-state render() loops.
@@ -17,8 +17,8 @@ export class OscilloscopeRenderer extends BaseRenderer {
     this.gain = 1.0;
     this.timebase = 1.0;
     this.persistence = 0.0;
-    this.autoFit = true; // Auto-lock to integer wave cycles for rock-solid stability
-    this.targetCycles = 4;
+    this.autoFit = true;
+    this.targetCycles = 0; // 0 = adaptive octave scaling, > 0 = fixed cycle count
   }
 
   render(frame, options = {}) {
@@ -55,28 +55,35 @@ export class OscilloscopeRenderer extends BaseRenderer {
     const numSamples = frame.numSamples || timeDataL?.length || 0;
     if (numSamples <= 2) return;
 
-    // 3. Precise Zero-Crossing Sub-Sample Alignment
+    // 3. Sub-Sample Zero-Crossing Lock
     const triggerOffset = isControl ? 0 : (frame.triggerIndex || 0);
     const subSampleFrac = isControl ? 0.0 : (frame.triggerFraction || 0.0);
+    const maxAvailable = Math.max(8, numSamples - triggerOffset - 2);
 
-    // 4. Auto-Fit Cycle Locking (eliminates right-to-left drift)
+    // 4. Adaptive Cycle Count or Timebase
     let visibleSamples;
     const autoFit = options.autoFit ?? this.autoFit;
     const freq = frame.estimatedFrequencyHz || 0;
 
-    if (autoFit && !isControl && freq >= 20 && freq <= 15000) {
+    if (autoFit && !isControl && freq >= 18 && freq <= 16000) {
       const sampleRate = frame.sampleRate || 44100;
       const periodSamples = sampleRate / freq;
-      const cycles = options.cycles || this.targetCycles;
+
+      // Adaptive cycle scaling by octave (more cycles for higher pitch, fewer for bass)
+      let cycles = options.cycles || this.targetCycles;
+      if (!cycles || cycles <= 0) {
+        if (freq < 80) cycles = 1;
+        else if (freq < 180) cycles = 2;
+        else if (freq < 500) cycles = 3;
+        else if (freq < 1200) cycles = 5;
+        else cycles = 8;
+      }
+
       const targetSamples = Math.round(periodSamples * cycles);
-      const maxAvailable = numSamples - triggerOffset - 2;
       visibleSamples = Math.max(16, Math.min(maxAvailable, targetSamples));
     } else {
       const timebaseFactor = options.timebase || this.timebase;
-      visibleSamples = Math.min(
-        numSamples - triggerOffset - 2,
-        Math.max(8, Math.floor(numSamples * timebaseFactor))
-      );
+      visibleSamples = Math.min(maxAvailable, Math.max(8, Math.floor(numSamples * timebaseFactor)));
     }
 
     if (visibleSamples <= 2) return;

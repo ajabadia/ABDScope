@@ -74,7 +74,19 @@
         <input type="range" id="slider-gain" min="0" max="1" step="0.01" value="0.5">
       </div>
 
-      <div class="panel-title" style="margin-top: 10px;">Input Source</div>
+      <div class="control-group" style="margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--scope-border, rgba(255,255,255,0.1));">
+        <div class="control-label"><span>Oscilloscope Scale / Cycles</span></div>
+        <select id="select-cycles" class="demo-btn" style="width: 100%; margin-top: 4px; padding: 5px 8px; cursor: pointer;">
+          <option value="0" selected>Auto (Octave Adaptive)</option>
+          <option value="1">1 Cycle (Single Wave)</option>
+          <option value="2">2 Cycles</option>
+          <option value="4">4 Cycles</option>
+          <option value="8">8 Cycles</option>
+          <option value="fixed">Fixed Timebase (Raw Window)</option>
+        </select>
+      </div>
+
+      <div class="panel-title" style="margin-top: 12px;">Input Source</div>
       <div class="btn-group">
         <button class="demo-btn active" id="btn-src-webaudio">Web Audio API</button>
         <button class="demo-btn" id="btn-src-bridge">Simulated C++ Bridge</button>
@@ -99,6 +111,7 @@
     let currentScope = null;
     let currentMountMode = 'embedded';
     let bridgeSimInterval = null;
+    let oscRenderer = null;
 
     function initScope(mountMode = 'embedded') {
       if (currentScope) {
@@ -128,7 +141,10 @@
         }
       });
 
-      currentScope.registerRenderer('oscilloscope', new OscilloscopeRenderer());
+      oscRenderer = new OscilloscopeRenderer();
+      applyCycleSetting();
+
+      currentScope.registerRenderer('oscilloscope', oscRenderer);
       currentScope.registerRenderer('spectrum', new SpectrumRenderer());
       currentScope.registerRenderer('lissajous', new LissajousRenderer());
       currentScope.registerRenderer('phase', new PhaseMeterRenderer());
@@ -139,15 +155,26 @@
       }
     }
 
+    function applyCycleSetting() {
+      if (!oscRenderer) return;
+      const sel = document.getElementById('select-cycles');
+      const val = sel ? sel.value : '0';
+      if (val === 'fixed') {
+        oscRenderer.autoFit = false;
+        oscRenderer.targetCycles = 0;
+      } else {
+        oscRenderer.autoFit = true;
+        oscRenderer.targetCycles = parseInt(val, 10) || 0;
+      }
+    }
+
     initScope('embedded');
 
     function startBridgeSim() {
       if (bridgeSimInterval) clearInterval(bridgeSimInterval);
-      let t = 0;
       bridgeSimInterval = setInterval(() => {
-        t += 33;
         if (currentScope && !currentScope.isDestroyed) {
-          const pkt = sigGen.generateSimulatedBridgePacket(t);
+          const pkt = sigGen.generateSimulatedBridgePacket();
           currentScope.pushFrame(pkt);
         }
       }, 33);
@@ -224,6 +251,11 @@
       const val = parseFloat(e.target.value);
       document.getElementById('val-gain').textContent = val.toFixed(2);
       sigGen.setLevel(val);
+    };
+
+    // Cycle Mode Change
+    document.getElementById('select-cycles').onchange = () => {
+      applyCycleSetting();
     };
 
     // Mount Mode Toggle
