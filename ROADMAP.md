@@ -199,6 +199,8 @@
   - Configuración de la función de enventanado para análisis espectral de precisión en laboratorio.
 - [ ] **6.3 Modos de Visualización 3D / Isometric Waterfall:**
   - Cascada espectral en perspectiva tridimensional.
+- [ ] **6.4 Refinamiento de Trigger en Sub-graves (< 140 Hz):**
+  - Autocovarianza de periodo o Schmitt-trigger adaptativo con búfer circular de ventana extendida (4096 muestras) para estabilización perfecta en notas de bajo profundo.
 
 ---
 
