@@ -16,24 +16,13 @@
     </div>
     <div class="btn-group">
       <!-- Theme Dropdown in Header -->
-      <div style="display: flex; align-items: center; gap: 6px; margin-right: 4px;">
+      <div style="display: flex; align-items: center; gap: 6px; margin-right: 8px;">
         <span style="font-size: 11px; color: var(--scope-text-muted);">Theme:</span>
         <select id="theme-select" class="demo-btn" style="padding: 4px 8px; cursor: pointer;">
           <option value="ms2000" selected>MS2000 (Cian)</option>
           <option value="cz101">CZ-101 (Red)</option>
           <option value="deepmind">DeepMind (Amber)</option>
           <option value="audiolab">AudioLab (Green)</option>
-        </select>
-      </div>
-
-      <!-- Spectrogram Palette Dropdown -->
-      <div style="display: flex; align-items: center; gap: 6px; margin-right: 8px;">
-        <span style="font-size: 11px; color: var(--scope-text-muted);">Waterfall:</span>
-        <select id="palette-select" class="demo-btn" style="padding: 4px 8px; cursor: pointer;">
-          <option value="inferno" selected>Inferno</option>
-          <option value="viridis">Viridis</option>
-          <option value="crt">CRT Green</option>
-          <option value="cyberpunk">Cyberpunk</option>
         </select>
       </div>
 
@@ -87,9 +76,20 @@
 
       <div class="panel-title" style="margin-top: 10px;">Input Source</div>
       <div class="btn-group">
-        <button class="demo-btn" id="btn-src-webaudio">Web Audio API</button>
-        <button class="demo-btn active" id="btn-src-bridge">Simulated C++ Bridge</button>
+        <button class="demo-btn active" id="btn-src-webaudio">Web Audio API</button>
+        <button class="demo-btn" id="btn-src-bridge">Simulated C++ Bridge</button>
         <button class="demo-btn" id="btn-src-audioin">Audio In</button>
+      </div>
+
+      <!-- Spectrogram Settings (Displayed under controls) -->
+      <div id="waterfall-controls" style="margin-top: 14px; padding-top: 10px; border-top: 1px solid var(--scope-border, rgba(255,255,255,0.1));">
+        <div class="control-label"><span>Waterfall Color Palette</span></div>
+        <select id="palette-select" class="demo-btn" style="width: 100%; margin-top: 4px; padding: 5px 8px; cursor: pointer;">
+          <option value="inferno" selected>Inferno (Studio Heat)</option>
+          <option value="viridis">Viridis (Perceptual)</option>
+          <option value="crt">CRT Green (Retro)</option>
+          <option value="cyberpunk">Cyberpunk (Neon)</option>
+        </select>
       </div>
     </aside>
 
@@ -110,7 +110,7 @@
     let currentScope = null;
     let currentMountMode = 'embedded';
     let bridgeSimInterval = null;
-    let selectedPalette = 'inferno';
+    let specRendererInstance = null;
 
     function initScope(mountMode = 'embedded') {
       if (currentScope) {
@@ -132,9 +132,6 @@
         defaultMode: 'oscilloscope',
         showFreeze: true,
         showVuMeters: true,
-        renderOptions: {
-          palette: selectedPalette
-        },
         onClose: () => {
           document.getElementById('btn-mount-floating').classList.remove('active');
           document.getElementById('btn-mount-embedded').classList.add('active');
@@ -143,11 +140,15 @@
         }
       });
 
+      specRendererInstance = new SpectrogramRenderer();
+      const palSelect = document.getElementById('palette-select');
+      if (palSelect) specRendererInstance.palette = palSelect.value;
+
       currentScope.registerRenderer('oscilloscope', new OscilloscopeRenderer());
       currentScope.registerRenderer('spectrum', new SpectrumRenderer());
       currentScope.registerRenderer('lissajous', new LissajousRenderer());
       currentScope.registerRenderer('phase', new PhaseMeterRenderer());
-      currentScope.registerRenderer('spectrogram', new SpectrogramRenderer());
+      currentScope.registerRenderer('spectrogram', specRendererInstance);
 
       if (mountMode === 'floating') {
         currentScope.open();
@@ -168,22 +169,27 @@
       }, 33);
     }
 
-    function startActiveSource() {
-      if (document.getElementById('btn-src-bridge').classList.contains('active')) {
-        startBridgeSim();
-      } else if (sigGen.analyser) {
-        currentScope.connectAnalyser(sigGen.analyser);
+    function stopBridgeSim() {
+      if (bridgeSimInterval) {
+        clearInterval(bridgeSimInterval);
+        bridgeSimInterval = null;
       }
     }
 
-    // Start with bridge sim active by default
-    startBridgeSim();
+    function startActiveSource() {
+      if (document.getElementById('btn-src-bridge').classList.contains('active')) {
+        startBridgeSim();
+      } else if (sigGen.analyserL) {
+        currentScope.connectAnalyser({ analyserL: sigGen.analyserL, analyserR: sigGen.analyserR });
+      }
+    }
 
     // Audio Init
     const btnAudio = document.getElementById('btn-toggle-audio');
     btnAudio.onclick = async () => {
-      const analyser = await sigGen.init();
-      currentScope.connectAnalyser(analyser);
+      stopBridgeSim();
+      const analysers = await sigGen.init();
+      currentScope.connectAnalyser(analysers);
       btnAudio.textContent = 'Audio Active';
       btnAudio.classList.add('active');
     };
@@ -267,12 +273,10 @@
       document.body.setAttribute('data-theme', e.target.value);
     };
 
-    // Spectrogram Palette in Header
+    // Spectrogram Palette Selector (Live update without resetting tab)
     document.getElementById('palette-select').onchange = (e) => {
-      selectedPalette = e.target.value;
-      if (currentScope) {
-        initScope(currentMountMode);
-        startActiveSource();
+      if (specRendererInstance) {
+        specRendererInstance.palette = e.target.value;
       }
     };
 
@@ -292,19 +296,19 @@
       btnSrcWebAudio.classList.add('active');
       btnSrcBridge.classList.remove('active');
       btnSrcAudioIn.classList.remove('active');
-      if (bridgeSimInterval) clearInterval(bridgeSimInterval);
-      const analyser = await sigGen.init();
-      currentScope.connectAnalyser(analyser);
+      stopBridgeSim();
+      const analysers = await sigGen.init();
+      currentScope.connectAnalyser(analysers);
     };
 
     btnSrcAudioIn.onclick = async () => {
       btnSrcAudioIn.classList.add('active');
       btnSrcBridge.classList.remove('active');
       btnSrcWebAudio.classList.remove('active');
-      if (bridgeSimInterval) clearInterval(bridgeSimInterval);
+      stopBridgeSim();
       await sigGen.init();
       await sigGen.startMic();
-      currentScope.connectAnalyser(sigGen.analyser);
+      currentScope.connectAnalyser({ analyserL: sigGen.analyserL, analyserR: sigGen.analyserR });
     };
   </script>
 </body>

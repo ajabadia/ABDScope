@@ -2,7 +2,7 @@
  * ABDScope Oscilloscope Renderer
  * ==============================
  * High-performance time-domain visualizer with analog phosphor persistence,
- * stereo overlay, timebase scaling, volts/div gain, and control signal adaptation.
+ * sub-sample zero-crossing phase lock, stereo overlay, and dynamic theme tokens.
  *
  * Constraints:
  * - Zero allocations in steady-state render() loops.
@@ -16,14 +16,9 @@ export class OscilloscopeRenderer extends BaseRenderer {
     super('oscilloscope');
     this.gain = 1.0;
     this.timebase = 1.0;
-    this.persistence = 0.0; // 0.0 = sharp clear, 0.8 = analog CRT phosphor trail
+    this.persistence = 0.0;
   }
 
-  /**
-   * Render time-domain waveform from ScopeDataFrame.
-   * @param {Object} frame - ScopeDataFrame
-   * @param {Object} [options] - Render options
-   */
   render(frame, options = {}) {
     if (!this.ctx || this.isDestroyed || !frame) return;
 
@@ -32,9 +27,9 @@ export class OscilloscopeRenderer extends BaseRenderer {
     const h = this.height;
     const isControl = frame.signalType === 'control';
     const midY = isControl ? Math.floor(h * 0.8) : Math.floor(h / 2);
-    const scaleY = isControl ? h * 0.7 : midY * 0.9;
+    const scaleY = isControl ? h * 0.7 : midY * 0.88;
 
-    // 1. Clear or Apply Analog Phosphor Trail
+    // 1. Clear or Analog Phosphor Trail
     const persist = options.persistence ?? this.persistence;
     if (persist > 0.01) {
       ctx.fillStyle = `rgba(8, 12, 18, ${Math.max(0.08, 1.0 - persist)})`;
@@ -56,13 +51,25 @@ export class OscilloscopeRenderer extends BaseRenderer {
     const timeDataL = frame.timeDataL;
     const timeDataR = frame.timeDataR;
     const numSamples = frame.numSamples || timeDataL?.length || 0;
-    if (numSamples === 0) return;
+    if (numSamples <= 2) return;
 
-    // Trigger offset (bypassed for CV/control signals)
-    const triggerOffset = isControl ? 0 : (frame.triggerIndex || 0);
+    // Sub-sample phase lock for zero-crossing
+    let triggerOffset = 0;
+    let subSampleFrac = 0.0;
+
+    if (!isControl && frame.triggerIndex > 0 && frame.triggerIndex < numSamples) {
+      triggerOffset = frame.triggerIndex;
+      const y0 = timeDataL[triggerOffset - 1] || 0.0;
+      const y1 = timeDataL[triggerOffset] || 0.0;
+      const dy = y1 - y0;
+      if (Math.abs(dy) > 0.0001) {
+        subSampleFrac = Math.max(0.0, Math.min(1.0, -y0 / dy));
+      }
+    }
+
     const timebaseFactor = options.timebase || this.timebase;
     const visibleSamples = Math.min(
-      numSamples - triggerOffset,
+      numSamples - triggerOffset - 1,
       Math.max(8, Math.floor(numSamples * timebaseFactor))
     );
     if (visibleSamples <= 2) return;
@@ -74,12 +81,16 @@ export class OscilloscopeRenderer extends BaseRenderer {
     if (timeDataR && options.channel !== 'Left' && !isControl) {
       ctx.save();
       ctx.lineWidth = 1.6;
-      ctx.strokeStyle = this.resolveColor(options.traceR, '#ff007f');
+      ctx.strokeStyle = this.resolveColor(options.traceR, '--scope-trace-r', '#ff007f');
       ctx.beginPath();
 
       for (let i = 0; i < visibleSamples; ++i) {
-        const v = (timeDataR[triggerOffset + i] || 0.0) * gainFactor;
-        const y = midY - (v * scaleY);
+        const sPos = triggerOffset + i - subSampleFrac;
+        const i0 = Math.max(0, Math.floor(sPos));
+        const i1 = Math.min(numSamples - 1, i0 + 1);
+        const f = sPos - i0;
+        const raw = (timeDataR[i0] * (1.0 - f) + timeDataR[i1] * f) * gainFactor;
+        const y = midY - (raw * scaleY);
         const x = i * stepX;
 
         if (i === 0) ctx.moveTo(x, y);
@@ -94,13 +105,17 @@ export class OscilloscopeRenderer extends BaseRenderer {
       ctx.save();
       ctx.lineWidth = isControl ? 2.5 : 2.0;
       ctx.strokeStyle = isControl
-        ? this.resolveColor(options.traceCv, '#ffaa00')
-        : this.resolveColor(options.traceL, '#00c3ff');
+        ? this.resolveColor(options.traceCv, '--scope-accent', '#ffaa00')
+        : this.resolveColor(options.traceL, '--scope-trace-l', '#00c3ff');
       ctx.beginPath();
 
       for (let i = 0; i < visibleSamples; ++i) {
-        const v = (timeDataL[triggerOffset + i] || 0.0) * gainFactor;
-        const y = midY - (v * scaleY);
+        const sPos = triggerOffset + i - subSampleFrac;
+        const i0 = Math.max(0, Math.floor(sPos));
+        const i1 = Math.min(numSamples - 1, i0 + 1);
+        const f = sPos - i0;
+        const raw = (timeDataL[i0] * (1.0 - f) + timeDataL[i1] * f) * gainFactor;
+        const y = midY - (raw * scaleY);
         const x = i * stepX;
 
         if (i === 0) ctx.moveTo(x, y);

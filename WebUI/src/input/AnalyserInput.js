@@ -23,15 +23,19 @@ export class AnalyserInput {
       throw new Error('[ABDScope:AnalyserInput] A valid AnalyserNode must be provided');
     }
 
-    this.analyser = analyser;
-    this.sampleRate = options.sampleRate ?? analyser.context?.sampleRate ?? 44100;
+    // Support both single AnalyserNode or { analyserL, analyserR }
+    this.analyserL = analyser.analyserL || analyser;
+    this.analyserR = analyser.analyserR || options.analyserR || null;
+
+    this.sampleRate = options.sampleRate ?? this.analyserL.context?.sampleRate ?? 44100;
     this.signalType = options.signalType ?? 'audio';
 
-    const fftSize = analyser.fftSize || 2048;
-    const binCount = analyser.frequencyBinCount || (fftSize / 2);
+    const fftSize = this.analyserL.fftSize || 2048;
+    const binCount = this.analyserL.frequencyBinCount || (fftSize / 2);
 
     // Pre-allocated typed arrays (Zero-allocation during render loops)
-    this.timeBuffer = new Float32Array(fftSize);
+    this.timeBufferL = new Float32Array(fftSize);
+    this.timeBufferR = this.analyserR ? new Float32Array(fftSize) : null;
     this.freqBuffer = new Float32Array(binCount);
 
     this.isRunning = false;
@@ -74,18 +78,21 @@ export class AnalyserInput {
    * @returns {Object} ScopeDataFrame
    */
   sample() {
-    if (typeof this.analyser.getFloatTimeDomainData === 'function') {
-      this.analyser.getFloatTimeDomainData(this.timeBuffer);
+    if (typeof this.analyserL.getFloatTimeDomainData === 'function') {
+      this.analyserL.getFloatTimeDomainData(this.timeBufferL);
     }
-    if (this.signalType === 'audio' && typeof this.analyser.getFloatFrequencyData === 'function') {
-      this.analyser.getFloatFrequencyData(this.freqBuffer);
+    if (this.analyserR && typeof this.analyserR.getFloatTimeDomainData === 'function') {
+      this.analyserR.getFloatTimeDomainData(this.timeBufferR);
+    }
+    if (this.signalType === 'audio' && typeof this.analyserL.getFloatFrequencyData === 'function') {
+      this.analyserL.getFloatFrequencyData(this.freqBuffer);
     }
 
     return createDataFrame({
       signalType: this.signalType,
       sampleRate: this.sampleRate,
-      timeDataL: this.timeBuffer,
-      timeDataR: null,
+      timeDataL: this.timeBufferL,
+      timeDataR: this.timeBufferR,
       spectrumDb: this.signalType === 'audio' ? this.freqBuffer : null
     });
   }

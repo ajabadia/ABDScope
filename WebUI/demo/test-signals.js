@@ -1,7 +1,7 @@
 /**
  * ABDScope Standalone Test Signal Generator
  * =========================================
- * Generates synthetic tones (Sine, Saw, Square, Triangle, Noise, FM, Mic, Stereo Spread)
+ * Generates synthetic tones (Sine, Saw, Square, Triangle, Noise, FM, Mic, True Stereo Phase)
  * and simulates C++ Bridge IPC packets for offline testing.
  */
 
@@ -9,15 +9,16 @@ export class TestSignalGenerator {
   constructor() {
     this.audioCtx = null;
     this.masterGain = null;
-    this.analyser = null;
+    this.analyserL = null;
+    this.analyserR = null;
+    this.delayR = null;
+    this.merger = null;
     this.osc = null;
-    this.oscR = null;
     this.fmOsc = null;
     this.fmGain = null;
     this.noiseNode = null;
     this.micStream = null;
     this.micSource = null;
-    this.merger = null;
 
     this.waveform = 'sine';
     this.frequency = 440;
@@ -38,15 +39,33 @@ export class TestSignalGenerator {
     this.masterGain = this.audioCtx.createGain();
     this.masterGain.gain.setValueAtTime(this.level, this.audioCtx.currentTime);
 
-    this.analyser = this.audioCtx.createAnalyser();
-    this.analyser.fftSize = 2048;
-    this.analyser.smoothingTimeConstant = 0.3;
+    this.analyserL = this.audioCtx.createAnalyser();
+    this.analyserL.fftSize = 2048;
+    this.analyserL.smoothingTimeConstant = 0.3;
 
-    this.masterGain.connect(this.analyser);
-    this.masterGain.connect(this.audioCtx.destination);
+    this.analyserR = this.audioCtx.createAnalyser();
+    this.analyserR.fftSize = 2048;
+    this.analyserR.smoothingTimeConstant = 0.3;
+
+    this.delayR = this.audioCtx.createDelay(1.0);
+    this.delayR.delayTime.setValueAtTime(0, this.audioCtx.currentTime);
+
+    this.merger = this.audioCtx.createChannelMerger(2);
+
+    // Routing: masterGain -> L -> analyserL -> merger[0] -> destination
+    //                     -> R -> delayR -> analyserR -> merger[1] -> destination
+    this.masterGain.connect(this.analyserL);
+    this.masterGain.connect(this.delayR);
+    this.delayR.connect(this.analyserR);
+
+    this.analyserL.connect(this.merger, 0, 0);
+    this.analyserR.connect(this.merger, 0, 1);
+    this.merger.connect(this.audioCtx.destination);
 
     this._startOscillator();
-    return this.analyser;
+    this.setStereoPhase(this.stereoPhaseDeg);
+
+    return { analyserL: this.analyserL, analyserR: this.analyserR };
   }
 
   _startOscillator() {
@@ -95,7 +114,7 @@ export class TestSignalGenerator {
 
   async startMic() {
     this._stopAllSources();
-    if (!navigator.mediaDevices?.getUserMedia) return;
+    if (!navigator.mediaDevices?.getUserMedia || !this.audioCtx) return;
 
     this.micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
     this.micSource = this.audioCtx.createMediaStreamSource(this.micStream);
@@ -137,6 +156,7 @@ export class TestSignalGenerator {
       if (this.fmOsc) {
         this.fmOsc.frequency.setTargetAtTime(this.frequency * 2, this.audioCtx.currentTime, 0.02);
       }
+      this.setStereoPhase(this.stereoPhaseDeg);
     }
   }
 
@@ -154,6 +174,10 @@ export class TestSignalGenerator {
 
   setStereoPhase(deg) {
     this.stereoPhaseDeg = parseFloat(deg) || 0;
+    if (this.delayR && this.audioCtx && this.frequency > 0) {
+      const delaySec = Math.max(0, (this.stereoPhaseDeg / 360.0) / this.frequency);
+      this.delayR.delayTime.setTargetAtTime(delaySec, this.audioCtx.currentTime, 0.02);
+    }
   }
 
   /**

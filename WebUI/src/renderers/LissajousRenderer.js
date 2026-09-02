@@ -51,7 +51,7 @@ export class LissajousRenderer extends BaseRenderer {
     // 3. Render Lissajous / Vectorscope Trace (Rotated 45° M/S)
     ctx.save();
     ctx.lineWidth = 1.4;
-    ctx.strokeStyle = this.resolveColor(options.traceColor, '#00c3ff');
+    ctx.strokeStyle = this.resolveColor(options.traceColor, '--scope-trace-l', '#00c3ff');
     ctx.beginPath();
 
     for (let i = 0; i < numSamples; ++i) {

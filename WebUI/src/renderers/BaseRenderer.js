@@ -135,26 +135,27 @@ export class BaseRenderer {
   }
 
   /**
-   * Resolves CSS custom properties (var(--...)) to computed canvas colors.
-   * @param {string} val - Color or var(--...) expression
-   * @param {string} fallback - Fallback color
-   * @returns {string} Canvas-ready color string
+   * Resolves CSS custom properties (var(--...)) or tokens to computed canvas colors.
+   * @param {string} [val] - Explicit color override or var(--...) expression
+   * @param {string} [cssVarName='--scope-accent'] - CSS custom property name to read from DOM
+   * @param {string} [fallback='#00c3ff'] - Fallback color
+   * @returns {string} Canvas-ready computed color string
    */
-  resolveColor(val, fallback = '#00c3ff') {
-    if (!val) return fallback;
-    if (typeof val === 'string' && val.startsWith('var(')) {
-      if (typeof window !== 'undefined' && this.canvas) {
-        const match = val.match(/var\(\s*([^,\)]+)(?:,\s*([^\)]+))?\)/);
-        if (match) {
-          const varName = match[1].trim();
-          const fallbackVal = match[2] ? match[2].trim() : fallback;
-          const computed = getComputedStyle(this.canvas).getPropertyValue(varName).trim();
-          return computed || fallbackVal;
-        }
-      }
-      return fallback;
+  resolveColor(val, cssVarName = '--scope-accent', fallback = '#00c3ff') {
+    if (val && typeof val === 'string' && !val.startsWith('var(')) {
+      return val;
     }
-    return val;
+    if (typeof window !== 'undefined' && this.canvas) {
+      let varName = cssVarName;
+      if (val && typeof val === 'string' && val.startsWith('var(')) {
+        const match = val.match(/var\(\s*([^,\)]+)/);
+        if (match) varName = match[1].trim();
+      }
+      const targetElem = this.canvas.closest ? (this.canvas.closest('.abd-scope-root') || document.body) : this.canvas;
+      const computed = getComputedStyle(targetElem).getPropertyValue(varName).trim();
+      if (computed) return computed;
+    }
+    return fallback;
   }
 
   /**
