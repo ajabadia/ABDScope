@@ -30,20 +30,18 @@
 
 ## 3. Current Phase & Next Tasks
 
-- [x] **Phase 1.1**: Repository initialization, directory structure, `package.json`, `vitest.config.js`, mandatory docs.
-- [x] **Phase 1.2**: Implement `trigger.js` (hysteresis zero-crossing + pitch tracker) with full unit test suite.
-- [x] **Phase 1.3**: Implement `frame.js` (ScopeDataFrame normalization, RMS, Peak, Phase correlation) with unit tests.
-- [x] **Phase 1.4**: Implement dual input adapters (`AnalyserInput.js`, `PushInput.js`).
-- [x] **Phase 1.5**: Implement `BaseRenderer.js` with explicit `destroy()` and HiDPI handling.
-- [x] **Phase 1.6**: Implement mount strategies (`EmbeddedMount.js`, `FloatingMount.js`).
-- [x] **Phase 1.7**: Implement `scope.js` main factory.
-- [x] **Phase 1.8**: Standalone interactive test harness (`WebUI/demo/index.html`).
-- [x] **Phase 1.9**: Wire Protocol data contract documentation (`docs/DATA_CONTRACT.md`).
+- [x] **Phase 1 (Core Engine & Web Base)**: Completed (Scaffold, trigger, frame normalizer, dual inputs, HiDPI base renderer, mounts, demo harness, wire protocol).
+- [x] **Phase 2 (Fundamental Renderers)**: Completed:
+  - [x] **Phase 2.1**: Complete `OscilloscopeRenderer.js` with phosphor trail, stereo overlay, volts/div, and CV signal adaptations.
+  - [x] **Phase 2.2**: Complete `SpectrumRenderer.js` with logarithmic FFT mapping (20 Hz - 20 kHz), gradient filling, and ballistic peak-hold.
+  - [x] **Phase 2.3**: Complete `VuMeterRenderer.js` companion vertical stereo level meters.
 
-### Next Target: FASE 2 (Fundamental Renderers)
-- [ ] **Phase 2.1**: Complete `OscilloscopeRenderer.js` (reticle grid, timebase/volts controls, freeze, phosphor persistence, mono/stereo overlay).
-- [ ] **Phase 2.2**: Implement `SpectrumRenderer.js` (logarithmic FFT 20Hz-20kHz, dB scale grid, peak-hold with exponential decay).
-- [ ] **Phase 2.3**: Implement `VuMeterRenderer.js` (companion vertical stereo meter).
+### Next Target: FASE 3 (Advanced Modes, Theming & Extras)
+- [ ] **Phase 3.1**: Implement `LissajousRenderer.js` (Goniometer / X-Y Vectorescope rotated 45° M/S with analog phosphor persistence).
+- [ ] **Phase 3.2**: Implement `PhaseMeterRenderer.js` (stereo phase correlation bar).
+- [ ] **Phase 3.3**: Preconfigured theme presets (cyberpunk, phosphor-crt, amber, nordic).
+- [ ] **Phase 3.4**: `SpectrogramRenderer.js` (waterfall time-frequency cascade).
+- [ ] **Phase 3.5**: Export frame capture to clipboard/PNG.
 
 ---
 

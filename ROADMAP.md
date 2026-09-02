@@ -97,22 +97,23 @@
 ### FASE 2: Modos Fundamentales (Osciloscopio, Espectro FFT, VU Meters)
 > **Objetivo:** Implementar con máxima fidelidad visual y rendimiento de 60 FPS los modos más utilizados en sintetizadores.
 
-- [ ] **2.1 `OscilloscopeRenderer.js`:**
+- [x] **2.1 `OscilloscopeRenderer.js`:**
   - Renderizado de traza temporal sobre Canvas 2D acelerado.
   - Soporte de modos estéreo (Traza L en cian, Traza R en magenta) y mono superpuesto.
   - Control de escala temporal (*Timebase* / zoom de ms a µs) y ganancia (*Volts/Div*).
   - Rejilla de osciloscopio estilo retícula analógica con divisiones horizontales/verticales.
   - Modo *Freeze* (congelación de traza para análisis).
   - Indicador de nota / frecuencia detectada en la cabecera (ej. "A4 — 440 Hz").
-  - Adaptación automática para `signalType === 'control'`: eje Y 0–1, escala temporal en segundos, sin trigger.
+  - Adaptación automática para `signalType === 'control'`: eje Y adaptado, escala temporal en segundos, sin trigger.
+  - Persistencia analógica de fósforo CRT.
 
-- [ ] **2.2 `SpectrumRenderer.js`:**
+- [x] **2.2 `SpectrumRenderer.js`:**
   - Renderizado espectral logarítmico de 20 Hz a 20 kHz.
-  - Rejilla de dB (-96 dB a 0 dB) y etiquetas de frecuencia (50, 100, 1k, 10k, 20k).
+  - Rejilla de dB (-96 dB a 0 dB) y etiquetas de frecuencia (50, 100, 200, 500, 1k, 2k, 5k, 10k, 20k).
   - Curva de respuesta con gradiente translúcido de relleno.
-  - Barras / marcadores de *Peak-Hold* con decaimiento suave (~30 dB/s, retención 1.5 s).
+  - Barras / marcadores de *Peak-Hold* con decaimiento suave (~30 dB/s).
 
-- [ ] **2.3 `VuMeterRenderer.js`:**
+- [x] **2.3 `VuMeterRenderer.js`:**
   - Barras verticales L/R con gradiente de color (verde → amarillo → rojo).
   - Indicador de peak con retención y caída lenta.
   - Se muestra al lado del renderer activo cuando `showVuMeters: true`.

@@ -67,6 +67,7 @@
   <script type="module">
     import { createScope } from '../src/scope.js';
     import { OscilloscopeRenderer } from '../src/renderers/OscilloscopeRenderer.js';
+    import { SpectrumRenderer } from '../src/renderers/SpectrumRenderer.js';
     import { TestSignalGenerator } from './test-signals.js';
 
     const sigGen = new TestSignalGenerator();
@@ -79,14 +80,17 @@
       currentScope = createScope({
         containerId: 'scope-container',
         mountMode,
-        enabledModes: ['oscilloscope'],
+        enabledModes: ['oscilloscope', 'spectrum'],
         defaultMode: 'oscilloscope',
         showFreeze: true,
         showVuMeters: true
       });
 
       const oscRenderer = new OscilloscopeRenderer();
+      const specRenderer = new SpectrumRenderer();
+
       currentScope.registerRenderer('oscilloscope', oscRenderer);
+      currentScope.registerRenderer('spectrum', specRenderer);
 
       if (mountMode === 'floating') {
         currentScope.open();

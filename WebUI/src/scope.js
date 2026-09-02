@@ -13,6 +13,7 @@ import { EmbeddedMount } from './mount/EmbeddedMount.js';
 import { FloatingMount } from './mount/FloatingMount.js';
 import { AnalyserInput } from './input/AnalyserInput.js';
 import { PushInput } from './input/PushInput.js';
+import { VuMeterRenderer } from './renderers/VuMeterRenderer.js';
 
 /**
  * Factory to create an ABDScope instance.
@@ -45,6 +46,9 @@ export function createScope(config = {}) {
   const onResize = (w, h, dpr) => {
     const r = renderers.get(currentMode);
     if (r) r.resize(w, h, dpr);
+    if (vuMeter && mount.vuContainer) {
+      vuMeter.resize(mount.vuContainer.clientWidth || 24, h, dpr);
+    }
   };
 
   const onFreezeToggle = (frozen) => {
@@ -65,6 +69,10 @@ export function createScope(config = {}) {
     ? new FloatingMount(mountOptions)
     : new EmbeddedMount(config.containerId, mountOptions);
 
+  const vuMeter = (config.showVuMeters && mount.vuContainer)
+    ? new VuMeterRenderer(mount.vuContainer)
+    : null;
+
   // Frame processing and dispatch
   const handleFrame = (frame) => {
     if (isDestroyed || isFrozen || !frame) return;
@@ -78,6 +86,10 @@ export function createScope(config = {}) {
     const renderer = renderers.get(currentMode);
     if (renderer) {
       renderer.render(frame, config.renderOptions || {});
+    }
+
+    if (vuMeter) {
+      vuMeter.render(frame);
     }
   };
 
@@ -138,6 +150,10 @@ export function createScope(config = {}) {
       if (activeInput) {
         activeInput.destroy();
         activeInput = null;
+      }
+
+      if (vuMeter) {
+        vuMeter.destroy();
       }
 
       renderers.forEach(r => r.destroy());
