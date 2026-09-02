@@ -37,57 +37,57 @@
 ### FASE 1: La Base Robusta (Core Engine, Dual Input, Wire Protocol & Test Harness)
 > **Objetivo:** Construir la base matemática, el contrato de datos y ambos modos de entrada antes de pintar píxeles finales. Incluir el wire protocol C++ → JS desde el día uno para no tener que rehacer la base cuando integremos con plugins.
 
-- [ ] **1.1 Inicialización del Repositorio:**
+- [x] **1.1 Inicialización del Repositorio:**
   - Configuración de `package.json` (`@abdsynths/scope`), `.gitignore`, configuración de `vitest`.
   - Estructura de carpetas: `WebUI/src/`, `WebUI/demo/`, `WebUI/tests/`, `Source/Core/`, `docs/`.
 
-- [ ] **1.2 Algoritmo de Triggering con Histéresis (`src/trigger.js`):**
+- [x] **1.2 Algoritmo de Triggering con Histéresis (`src/trigger.js`):**
   - Implementación de cruce por cero (*zero-crossing*) con ventana de histéresis regulable.
   - Estimador de frecuencia fundamental / pitch para auto-timebase.
-  - Detección de nota MIDI equivalente (reutilizando `midiToName()` de `@abdsynths/midi-keyb` o reimplementación ligera).
+  - Detección de nota MIDI equivalente (`frequencyToNoteName()`).
   - Desactivación automática del trigger cuando `signalType === 'control'`.
   - Batería de tests unitarios con Vitest (`tests/trigger.test.js`) contra senos puros, sierras, cuadradas, FM y señales con ruido.
 
-- [ ] **1.3 Normalizador de Frame de Datos (`src/frame.js`):**
+- [x] **1.3 Normalizador de Frame de Datos (`src/frame.js`):**
   - Transformación de buffers PCM o datos de `AnalyserNode` a `ScopeDataFrame` normalizado.
   - Campo `signalType: 'audio' | 'control'` para adaptar rango de ejes y comportamiento.
   - Cálculo de RMS, Peak y correlación de fase estéreo.
   - Tests unitarios (`tests/frame.test.js`).
 
-- [ ] **1.4 Adaptadores de Entrada Dual (`src/input/`):**
+- [x] **1.4 Adaptadores de Entrada Dual (`src/input/`):**
   - **`AnalyserInput.js`:** Encapsula un `AnalyserNode` de Web Audio. Arranca un `requestAnimationFrame` loop interno que extrae `getFloatTimeDomainData` / `getFloatFrequencyData` y genera `ScopeDataFrame` automáticamente.
   - **`PushInput.js`:** Recibe frames externos vía `pushFrame()`. No tiene render loop propio — el consumidor controla la cadencia.
   - Tests unitarios (`tests/input.test.js`).
 
-- [ ] **1.5 Arquitectura Base de Renderers (`src/renderers/BaseRenderer.js`):**
+- [x] **1.5 Arquitectura Base de Renderers (`src/renderers/BaseRenderer.js`):**
   - Definición de la interfaz `IScopeRenderer` con ciclo de vida completo:
     - `init(canvas, options)`
     - `render(dataFrame, options)`
     - `resize(width, height, devicePixelRatio)`
     - **`destroy()`** — limpieza obligatoria: cancela `rAF`, desconecta nodos, anula referencias.
 
-- [ ] **1.6 HiDPI / Retina desde el día uno:**
+- [x] **1.6 HiDPI / Retina desde el día uno:**
   - `ResizeObserver` sobre el contenedor.
   - Multiplicación del canvas por `devicePixelRatio`.
   - Escalado del contexto 2D con `ctx.scale(dpr, dpr)`.
 
-- [ ] **1.7 Modos de Montaje (`src/mount/`):**
+- [x] **1.7 Modos de Montaje (`src/mount/`):**
   - **`EmbeddedMount.js`:** Panel integrado en la UI del sintetizador.
   - **`FloatingMount.js`:** Modal flotante arrastrable con botón de cierre, animación fade-in y métodos `open()` / `close()` / `toggle()`.
 
-- [ ] **1.8 Factory Principal (`src/scope.js`):**
+- [x] **1.8 Factory Principal (`src/scope.js`):**
   - Implementación de `createScope({ containerId, mountMode, enabledModes, showVuMeters, ... })`.
   - Auto-ocultación de pestañas si `enabledModes.length === 1`.
   - Método `destroy()` que propaga a todos los renderers, inputs, observers y DOM.
   - Métodos de entrada: `connectAnalyser(node)` y `pushFrame(dataFrame)`.
 
-- [ ] **1.9 Wire Protocol (`docs/DATA_CONTRACT.md`):**
+- [x] **1.9 Wire Protocol (`docs/DATA_CONTRACT.md`):**
   - Especificación del formato JSON de frames enviados desde C++ vía JUCE WebView bridge.
   - Frecuencia: 30 Hz (~33 ms).
   - Campos, tipos y rangos documentados.
   - Ruta de optimización futura: transferencia binaria vía `ArrayBuffer`.
 
-- [ ] **1.10 Banco de Pruebas Interactivo (`demo/`):**
+- [x] **1.10 Banco de Pruebas Interactivo (`demo/`):**
   - `demo/index.html` con generador Web Audio de tonos (Seno, Sierra, Cuadrada, Ruido, FM, entrada de Micrófono).
   - Selector de modos, controles de zoom/timebase, selector de canal, toggle montaje embebido/flotante.
   - Simulador de datos push (para probar el modo Bridge sin necesitar un plugin real).

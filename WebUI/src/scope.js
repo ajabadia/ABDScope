@@ -1,0 +1,151 @@
+/**
+ * ABDScope Main Factory
+ * =====================
+ * Primary entry point for instantiating universal audio scopes in any ABDSynths project.
+ * Decouples input ingestion, mount presentation, and view rendering.
+ *
+ * Constraints:
+ * - Pure orchestrator, zero hardcoded rendering loops.
+ * - Under 190 lines of code (Single Responsibility Principle).
+ */
+
+import { EmbeddedMount } from './mount/EmbeddedMount.js';
+import { FloatingMount } from './mount/FloatingMount.js';
+import { AnalyserInput } from './input/AnalyserInput.js';
+import { PushInput } from './input/PushInput.js';
+
+/**
+ * Factory to create an ABDScope instance.
+ * @param {Object} config - Configuration options
+ * @returns {Object} Scope instance controller
+ */
+export function createScope(config = {}) {
+  const mountMode = config.mountMode || 'embedded';
+  const enabledModes = config.enabledModes || ['oscilloscope'];
+  let currentMode = config.defaultMode || enabledModes[0] || 'oscilloscope';
+
+  let activeInput = null;
+  let isFrozen = false;
+  let isDestroyed = false;
+  const renderers = new Map();
+
+  // Handle mode selection callback
+  const onModeSelect = (mode) => {
+    if (renderers.has(mode)) {
+      currentMode = mode;
+      const r = renderers.get(mode);
+      if (mount.canvas) {
+        const dpr = typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1;
+        r.resize(mount.canvas.clientWidth || 300, mount.canvas.clientHeight || 150, dpr);
+      }
+    }
+  };
+
+  // Handle resize callback
+  const onResize = (w, h, dpr) => {
+    const r = renderers.get(currentMode);
+    if (r) r.resize(w, h, dpr);
+  };
+
+  const onFreezeToggle = (frozen) => {
+    isFrozen = frozen;
+  };
+
+  // Mount instantiation
+  const mountOptions = {
+    ...config,
+    enabledModes,
+    defaultMode: currentMode,
+    onModeSelect,
+    onResize,
+    onFreezeToggle
+  };
+
+  const mount = mountMode === 'floating'
+    ? new FloatingMount(mountOptions)
+    : new EmbeddedMount(config.containerId, mountOptions);
+
+  // Frame processing and dispatch
+  const handleFrame = (frame) => {
+    if (isDestroyed || isFrozen || !frame) return;
+
+    if (mount.setNoteTag && frame.detectedNoteName) {
+      mount.setNoteTag(`${frame.detectedNoteName} (${frame.estimatedFrequencyHz}Hz)`);
+    } else if (mount.setNoteTag && !frame.detectedNoteName) {
+      mount.setNoteTag('');
+    }
+
+    const renderer = renderers.get(currentMode);
+    if (renderer) {
+      renderer.render(frame, config.renderOptions || {});
+    }
+  };
+
+  // Controller API
+  const instance = {
+    mount,
+    get currentMode() { return currentMode; },
+    get isDestroyed() { return isDestroyed; },
+    get isOpen() { return mount.isOpen ?? true; },
+
+    registerRenderer(modeName, rendererInstance) {
+      if (!rendererInstance) return;
+      renderers.set(modeName, rendererInstance);
+      if (mount.canvas) {
+        rendererInstance.init(mount.canvas, config.rendererOptions || {});
+      }
+    },
+
+    setMode(modeName) {
+      if (renderers.has(modeName)) {
+        mount.setActiveTab?.(modeName);
+        onModeSelect(modeName);
+      }
+    },
+
+    connectAnalyser(analyserNode, options = {}) {
+      if (activeInput) activeInput.destroy();
+      activeInput = new AnalyserInput(analyserNode, { ...config, ...options });
+      activeInput.start(handleFrame);
+      return activeInput;
+    },
+
+    pushFrame(rawPacket) {
+      if (!activeInput || !(activeInput instanceof PushInput)) {
+        if (activeInput) activeInput.destroy();
+        activeInput = new PushInput(config);
+        activeInput.start(handleFrame);
+      }
+      return activeInput.push(rawPacket);
+    },
+
+    open() {
+      if (mount.open) mount.open();
+    },
+
+    close() {
+      if (mount.close) mount.close();
+    },
+
+    toggle() {
+      if (mount.toggle) mount.toggle();
+    },
+
+    destroy() {
+      if (isDestroyed) return;
+      isDestroyed = true;
+
+      if (activeInput) {
+        activeInput.destroy();
+        activeInput = null;
+      }
+
+      renderers.forEach(r => r.destroy());
+      renderers.clear();
+
+      mount.destroy();
+    }
+  };
+
+  return instance;
+}

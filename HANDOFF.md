@@ -31,13 +31,19 @@
 ## 3. Current Phase & Next Tasks
 
 - [x] **Phase 1.1**: Repository initialization, directory structure, `package.json`, `vitest.config.js`, mandatory docs.
-- [ ] **Phase 1.2**: Implement `trigger.js` (hysteresis zero-crossing + pitch tracker) with full unit test suite.
-- [ ] **Phase 1.3**: Implement `frame.js` (ScopeDataFrame normalization, RMS, Peak, Phase correlation) with unit tests.
-- [ ] **Phase 1.4**: Implement dual input adapters (`AnalyserInput.js`, `PushInput.js`).
-- [ ] **Phase 1.5**: Implement `BaseRenderer.js` with explicit `destroy()` and HiDPI handling.
-- [ ] **Phase 1.6**: Implement mount strategies (`EmbeddedMount.js`, `FloatingMount.js`).
-- [ ] **Phase 1.7**: Implement `scope.js` main factory.
-- [ ] **Phase 1.8**: Standalone interactive test harness (`demo/index.html`).
+- [x] **Phase 1.2**: Implement `trigger.js` (hysteresis zero-crossing + pitch tracker) with full unit test suite.
+- [x] **Phase 1.3**: Implement `frame.js` (ScopeDataFrame normalization, RMS, Peak, Phase correlation) with unit tests.
+- [x] **Phase 1.4**: Implement dual input adapters (`AnalyserInput.js`, `PushInput.js`).
+- [x] **Phase 1.5**: Implement `BaseRenderer.js` with explicit `destroy()` and HiDPI handling.
+- [x] **Phase 1.6**: Implement mount strategies (`EmbeddedMount.js`, `FloatingMount.js`).
+- [x] **Phase 1.7**: Implement `scope.js` main factory.
+- [x] **Phase 1.8**: Standalone interactive test harness (`WebUI/demo/index.html`).
+- [x] **Phase 1.9**: Wire Protocol data contract documentation (`docs/DATA_CONTRACT.md`).
+
+### Next Target: FASE 2 (Fundamental Renderers)
+- [ ] **Phase 2.1**: Complete `OscilloscopeRenderer.js` (reticle grid, timebase/volts controls, freeze, phosphor persistence, mono/stereo overlay).
+- [ ] **Phase 2.2**: Implement `SpectrumRenderer.js` (logarithmic FFT 20Hz-20kHz, dB scale grid, peak-hold with exponential decay).
+- [ ] **Phase 2.3**: Implement `VuMeterRenderer.js` (companion vertical stereo meter).
 
 ---
 

@@ -1,0 +1,180 @@
+/**
+ * ABDScope Unified Styling System
+ * ================================
+ * Pure Vanilla CSS with cascading token fallbacks from host themes.
+ * Zero hardcoded colors — fully skin-adaptable for any ABDSynths instrument.
+ */
+
+:root {
+  --scope-bg: var(--color-panel-bg, #080c14);
+  --scope-surface: var(--color-panel-surface, #0f1622);
+  --scope-surface-elevated: var(--color-panel-surface-elevated, #162234);
+  --scope-border: var(--color-panel-border, rgba(0, 195, 255, 0.2));
+  --scope-border-strong: var(--color-panel-border-strong, rgba(0, 195, 255, 0.45));
+  --scope-accent: var(--color-accent, #00c3ff);
+  --scope-accent-hover: var(--color-accent-hover, #38d3ff);
+  --scope-trace-l: var(--color-accent, #00c3ff);
+  --scope-trace-r: #ff007f;
+  --scope-spectrum: var(--color-accent, #00e676);
+  --scope-grid: rgba(255, 255, 255, 0.07);
+  --scope-text-main: var(--color-text-main, #e8f4fc);
+  --scope-text-muted: var(--color-text-muted, #7e9bb5);
+  --scope-font-lcd: var(--font-lcd, 'Courier New', 'Roboto Mono', monospace);
+}
+
+/* Root Component Frame */
+.abd-scope-root {
+  font-family: var(--font-sans, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif);
+  color: var(--scope-text-main);
+  box-sizing: border-box;
+  user-select: none;
+}
+
+/* ─── Embedded Mount Layout ─── */
+.abd-scope-embedded {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  min-height: 100px;
+  background: var(--scope-bg);
+  border: 1px solid var(--scope-border);
+  border-radius: var(--radius-panel, 4px);
+  overflow: hidden;
+}
+
+/* ─── Floating Modal Layout ─── */
+.abd-scope-floating {
+  position: fixed;
+  top: 70px;
+  right: 24px;
+  width: 420px;
+  background: var(--scope-bg);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid var(--scope-border);
+  border-radius: var(--radius-chassis, 6px);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.8), inset 0 1px 1px rgba(255, 255, 255, 0.12);
+  display: flex;
+  flex-direction: column;
+  z-index: 1500;
+  overflow: hidden;
+  animation: abdScopeFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes abdScopeFadeIn {
+  from { opacity: 0; transform: translateY(-8px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* Header & Controls */
+.abd-scope-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 10px;
+  background: rgba(0, 0, 0, 0.35);
+  border-bottom: 1px solid var(--scope-border);
+}
+
+.abd-scope-drag-handle {
+  cursor: move;
+}
+
+.abd-scope-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  color: var(--scope-accent);
+}
+
+.abd-scope-indicator {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--scope-accent);
+  box-shadow: 0 0 8px var(--scope-accent);
+}
+
+.abd-scope-note-tag {
+  display: none;
+  font-family: var(--scope-font-lcd);
+  font-size: 10px;
+  font-weight: bold;
+  background: rgba(0, 0, 0, 0.5);
+  padding: 1px 6px;
+  border-radius: 3px;
+  border: 1px solid var(--scope-border);
+  color: var(--color-lcd-text, #54ff72);
+}
+
+.abd-scope-controls,
+.abd-scope-tabs {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.abd-scope-tab-btn,
+.abd-scope-freeze-btn {
+  background: var(--scope-surface);
+  border: 1px solid var(--scope-border);
+  color: var(--scope-text-muted);
+  font-size: 9px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.abd-scope-tab-btn.active,
+.abd-scope-tab-btn:hover,
+.abd-scope-freeze-btn.active {
+  background: var(--scope-accent);
+  color: #000;
+  border-color: var(--scope-accent);
+}
+
+.abd-scope-close-btn {
+  background: transparent;
+  border: none;
+  color: var(--scope-text-muted);
+  font-size: 16px;
+  font-weight: bold;
+  padding: 0 6px;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.abd-scope-close-btn:hover {
+  color: #ff3344;
+}
+
+/* Visualizer Body & Canvas */
+.abd-scope-body {
+  position: relative;
+  flex: 1;
+  display: flex;
+  background: #000000;
+  overflow: hidden;
+}
+
+.abd-scope-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.abd-scope-vu-container {
+  width: 28px;
+  border-left: 1px solid var(--scope-border);
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  padding: 6px 4px;
+  gap: 3px;
+  box-sizing: border-box;
+}
