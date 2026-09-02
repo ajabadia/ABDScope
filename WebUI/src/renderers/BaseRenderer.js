@@ -1,19 +1,22 @@
 /**
  * ABDScope Base Renderer Contract
  * ===============================
- * Abstract base class and common rendering infrastructure for all scope view modes.
- * Enforces strict HiDPI backing-store scaling, theme resolution, and explicit lifecycle destruction.
+ * Abstract base class for all mode renderers (Oscilloscope, Spectrum, Lissajous, etc.).
+ * Handles canvas scaling (HiDPI / devicePixelRatio), grid reticle, and cleanup.
  *
  * Constraints:
  * - Zero allocations in steady-state render() loops.
- * - Under 150 lines of code (Single Responsibility Principle).
+ * - Under 180 lines of code (Single Responsibility Principle).
  */
 
 export class BaseRenderer {
   /**
-   * @param {string} modeName - Mode identifier ('oscilloscope', 'spectrum', etc.)
+   * @param {string} modeName - Unique mode identifier (e.g. 'oscilloscope', 'spectrum')
    */
   constructor(modeName) {
+    if (!modeName) {
+      throw new Error('[ABDScope:BaseRenderer] modeName must be specified');
+    }
     this.modeName = modeName;
     this.canvas = null;
     this.ctx = null;
@@ -21,109 +24,104 @@ export class BaseRenderer {
     this.height = 0;
     this.dpr = 1;
     this.isDestroyed = false;
+    this.options = {};
   }
 
   /**
-   * Initialize renderer with a target HTML5 canvas.
-   * @param {HTMLCanvasElement} canvas - Target canvas
-   * @param {Object} [options] - Initial configuration
+   * Bind an HTML5 Canvas to this renderer and initialize context.
+   * @param {HTMLCanvasElement} canvas
+   * @param {Object} [options] - Initial render options
    */
   init(canvas, options = {}) {
-    if (!canvas) {
-      throw new Error(`[ABDScope:${this.modeName}] Canvas element is required`);
+    if (!canvas || typeof canvas.getContext !== 'function') {
+      throw new Error(`[ABDScope:${this.modeName}] init() requires a valid HTMLCanvasElement`);
     }
-
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d', { alpha: true });
     this.options = { ...options };
     this.isDestroyed = false;
-
     const w = options.width || canvas.clientWidth || 300;
     const h = options.height || canvas.clientHeight || 150;
-    const dpr = options.dpr || (typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1);
+    this.resize(w, h, options.dpr || 1);
+  }
 
-    this.resize(w, h, dpr);
+  attach(canvas, options = {}) {
+    this.init(canvas, options);
   }
 
   /**
-   * Resize canvas backing store for crisp HiDPI (Retina / 4K) rendering.
-   * @param {number} width - CSS width in px
-   * @param {number} height - CSS height in px
-   * @param {number} [dpr=1] - Window devicePixelRatio
+   * Resize canvas buffer for crisp HiDPI rendering.
+   * @param {number} width - CSS width in pixels
+   * @param {number} height - CSS height in pixels
+   * @param {number} [dpr=1] - Device pixel ratio
    */
   resize(width, height, dpr = 1) {
-    if (!this.canvas || this.isDestroyed) return;
+    if (!this.canvas || !this.ctx || this.isDestroyed) return;
 
     this.width = Math.max(10, Math.floor(width));
     this.height = Math.max(10, Math.floor(height));
     this.dpr = Math.max(1, dpr);
 
-    // HiDPI Backing Store Multiplication
     this.canvas.width = Math.floor(this.width * this.dpr);
     this.canvas.height = Math.floor(this.height * this.dpr);
-
-    this.canvas.style.width = `${this.width}px`;
-    this.canvas.style.height = `${this.height}px`;
-
-    // Reset transform and scale to CSS pixels
-    if (this.ctx) {
-      this.ctx.setTransform(1, 0, 0, 1, 0, 0);
-      this.ctx.scale(this.dpr, this.dpr);
+    if (this.canvas.style) {
+      this.canvas.style.width = `${this.width}px`;
+      this.canvas.style.height = `${this.height}px`;
     }
+
+    this.ctx.setTransform(1, 0, 0, 1, 0, 0); // Reset transform
+    this.ctx.scale(this.dpr, this.dpr);
   }
 
   /**
-   * Clear canvas surface with optional background color.
-   * @param {string} [fillColor] - CSS color or transparent
+   * Clear the entire canvas viewport.
+   * @param {string} [bgColor='rgba(8, 12, 18, 0.94)'] - Background fill
    */
-  clear(fillColor = null) {
+  clear(bgColor = 'rgba(8, 12, 18, 0.94)') {
     if (!this.ctx || this.isDestroyed) return;
-
-    if (fillColor) {
-      this.ctx.fillStyle = fillColor;
-      this.ctx.fillRect(0, 0, this.width, this.height);
-    } else {
-      this.ctx.clearRect(0, 0, this.width, this.height);
-    }
+    this.ctx.fillStyle = bgColor;
+    this.ctx.fillRect(0, 0, this.width, this.height);
   }
 
   /**
-   * Draw standard oscilloscope reticle / grid.
-   * @param {Object} [gridOptions] - Grid style options
+   * Draw standard studio reticle / graticule.
+   * @param {Object} [options]
    */
-  drawGrid(gridOptions = {}) {
+  drawGrid(options = {}) {
     if (!this.ctx || this.isDestroyed) return;
 
     const ctx = this.ctx;
     const w = this.width;
     const h = this.height;
-    const divisionsX = gridOptions.divisionsX || 8;
-    const divisionsY = gridOptions.divisionsY || 4;
-    const color = gridOptions.color || 'rgba(255, 255, 255, 0.07)';
+    const divX = options.divisionsX || 8;
+    const divY = options.divisionsY || 4;
+    const gridColor = options.color || 'rgba(255, 255, 255, 0.06)';
+    const centerColor = options.centerColor || 'rgba(255, 255, 255, 0.12)';
 
     ctx.save();
-    ctx.strokeStyle = color;
     ctx.lineWidth = 1;
-    ctx.beginPath();
+    ctx.strokeStyle = gridColor;
 
-    // Vertical divisions
-    for (let x = 1; x < divisionsX; ++x) {
-      const px = Math.floor((w / divisionsX) * x) + 0.5;
-      ctx.moveTo(px, 0);
-      ctx.lineTo(px, h);
+    // Vertical subdivisions
+    const stepX = w / divX;
+    for (let x = stepX; x < w - 1; x += stepX) {
+      ctx.beginPath();
+      ctx.moveTo(Math.floor(x) + 0.5, 0);
+      ctx.lineTo(Math.floor(x) + 0.5, h);
+      ctx.stroke();
     }
 
-    // Horizontal divisions
-    for (let y = 1; y < divisionsY; ++y) {
-      const py = Math.floor((h / divisionsY) * y) + 0.5;
-      ctx.moveTo(0, py);
-      ctx.lineTo(w, py);
+    // Horizontal subdivisions
+    const stepY = h / divY;
+    for (let y = stepY; y < h - 1; y += stepY) {
+      ctx.beginPath();
+      ctx.moveTo(0, Math.floor(y) + 0.5);
+      ctx.lineTo(w, Math.floor(y) + 0.5);
+      ctx.stroke();
     }
 
-    ctx.stroke();
-
-    // Center crosshairs (subtle emphasis)
-    ctx.strokeStyle = gridOptions.centerColor || 'rgba(255, 255, 255, 0.12)';
+    // Center Crosshairs (Subtle emphasis)
+    ctx.strokeStyle = centerColor;
     ctx.beginPath();
     ctx.moveTo(0, Math.floor(h / 2) + 0.5);
     ctx.lineTo(w, Math.floor(h / 2) + 0.5);
@@ -156,6 +154,32 @@ export class BaseRenderer {
       if (computed) return computed;
     }
     return fallback;
+  }
+
+  /**
+   * Converts any CSS color (#hex or rgb(...)) to an RGBA string with custom alpha.
+   * @param {string} color - Color string
+   * @param {number} [alpha=1.0] - Alpha channel (0.0 to 1.0)
+   * @returns {string} rgba(...) color string
+   */
+  colorWithAlpha(color, alpha = 1.0) {
+    if (!color) return `rgba(0, 195, 255, ${alpha})`;
+    const trimmed = color.trim();
+    if (trimmed.startsWith('#')) {
+      let hex = trimmed.slice(1);
+      if (hex.length === 3) hex = hex.split('').map(c => c + c).join('');
+      const r = parseInt(hex.slice(0, 2), 16) || 0;
+      const g = parseInt(hex.slice(2, 4), 16) || 0;
+      const b = parseInt(hex.slice(4, 6), 16) || 0;
+      return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    }
+    if (trimmed.startsWith('rgb')) {
+      const m = trimmed.match(/\d+/g);
+      if (m && m.length >= 3) {
+        return `rgba(${m[0]}, ${m[1]}, ${m[2]}, ${alpha})`;
+      }
+    }
+    return trimmed;
   }
 
   /**

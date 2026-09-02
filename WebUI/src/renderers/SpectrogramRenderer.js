@@ -60,7 +60,14 @@ export class SpectrogramRenderer extends BaseRenderer {
     const h = this.height;
     const sampleRate = frame.sampleRate || 44100;
     const binWidthHz = (sampleRate / 2) / bins;
-    const pal = options.palette || this.palette;
+    let pal = options.palette || this.palette;
+    if (!options.palette || pal === 'auto') {
+      const accent = this.resolveColor(null, '--scope-accent', '#00c3ff');
+      if (accent.includes('255, 170') || accent.includes('ffaa00')) pal = 'amber';
+      else if (accent.includes('255, 51') || accent.includes('ff3344')) pal = 'inferno';
+      else if (accent.includes('0, 230') || accent.includes('00e676')) pal = 'crt';
+      else pal = 'cyberpunk';
+    }
 
     // 1. Scroll previous offscreen canvas down
     const scrollSpeed = options.speed || 2;
@@ -85,10 +92,10 @@ export class SpectrogramRenderer extends BaseRenderer {
       const normY = (db - minDb) / dbRange; // 0.0 to 1.0 intensity
       let r = 0, g = 0, b = 0;
 
-      if (pal === 'viridis') {
-        r = Math.min(255, Math.floor(normY > 0.6 ? (normY - 0.6) * 600 : 30 * normY));
-        g = Math.min(255, Math.floor(Math.sin(normY * Math.PI) * 255));
-        b = Math.min(255, Math.floor((1.0 - normY) * 200 + normY * 100));
+      if (pal === 'amber') {
+        r = Math.min(255, Math.floor(normY * 255));
+        g = Math.min(255, Math.floor(normY * normY * 180));
+        b = Math.min(255, Math.floor(normY > 0.85 ? (normY - 0.85) * 800 : 0));
       } else if (pal === 'crt') {
         r = Math.min(255, Math.floor(normY > 0.8 ? (normY - 0.8) * 1000 : 0));
         g = Math.min(255, Math.floor(normY * 255));
@@ -97,10 +104,14 @@ export class SpectrogramRenderer extends BaseRenderer {
         r = Math.min(255, Math.floor(normY > 0.5 ? (normY - 0.5) * 450 : 0));
         g = Math.min(255, Math.floor(normY * 200));
         b = Math.min(255, Math.floor(Math.sin(normY * Math.PI * 0.5) * 255));
-      } else { // default: inferno / plasma
+      } else if (pal === 'viridis') {
+        r = Math.min(255, Math.floor(normY > 0.6 ? (normY - 0.6) * 600 : 30 * normY));
+        g = Math.min(255, Math.floor(Math.sin(normY * Math.PI) * 255));
+        b = Math.min(255, Math.floor((1.0 - normY) * 200 + normY * 100));
+      } else { // inferno / plasma
         r = Math.min(255, Math.floor(normY * normY * 300));
         g = Math.min(255, Math.floor(Math.sin(normY * Math.PI) * 230));
-        b = Math.min(255, Math.floor((1.0 - normY) * normY * 350 + (normY > 0.8 ? 200 : 0)));
+        b = Math.min(255, Math.floor((1.0 - normY) * 350 + (normY > 0.8 ? 200 : 0)));
       }
 
       for (let y = 0; y < scrollSpeed; ++y) {

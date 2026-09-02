@@ -54,22 +54,12 @@ export class OscilloscopeRenderer extends BaseRenderer {
     if (numSamples <= 2) return;
 
     // Sub-sample phase lock for zero-crossing
-    let triggerOffset = 0;
-    let subSampleFrac = 0.0;
-
-    if (!isControl && frame.triggerIndex > 0 && frame.triggerIndex < numSamples) {
-      triggerOffset = frame.triggerIndex;
-      const y0 = timeDataL[triggerOffset - 1] || 0.0;
-      const y1 = timeDataL[triggerOffset] || 0.0;
-      const dy = y1 - y0;
-      if (Math.abs(dy) > 0.0001) {
-        subSampleFrac = Math.max(0.0, Math.min(1.0, -y0 / dy));
-      }
-    }
+    const triggerOffset = isControl ? 0 : (frame.triggerIndex || 0);
+    const subSampleFrac = isControl ? 0.0 : (frame.triggerFraction || 0.0);
 
     const timebaseFactor = options.timebase || this.timebase;
     const visibleSamples = Math.min(
-      numSamples - triggerOffset - 1,
+      numSamples - triggerOffset - 2,
       Math.max(8, Math.floor(numSamples * timebaseFactor))
     );
     if (visibleSamples <= 2) return;

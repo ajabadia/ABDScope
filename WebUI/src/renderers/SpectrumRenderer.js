@@ -93,10 +93,10 @@ export class SpectrumRenderer extends BaseRenderer {
     ctx.closePath();
 
     // 4. Fill Translucent Gradient (Theme Adaptive)
-    const strokeColor = this.resolveColor(options.strokeColor, '#00e676');
+    const strokeColor = this.resolveColor(options.strokeColor, '--scope-spectrum', '#00e676');
     const gradient = ctx.createLinearGradient(0, 0, 0, h);
-    gradient.addColorStop(0, strokeColor + '60');
-    gradient.addColorStop(0.6, strokeColor + '20');
+    gradient.addColorStop(0, this.colorWithAlpha(strokeColor, 0.45));
+    gradient.addColorStop(0.6, this.colorWithAlpha(strokeColor, 0.15));
     gradient.addColorStop(1, 'rgba(0, 0, 0, 0.0)');
     ctx.fillStyle = gradient;
     ctx.fill();

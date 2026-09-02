@@ -1,8 +1,8 @@
 /**
  * ABDScope Trigger Engine
  * =======================
- * Pure mathematical algorithms for zero-crossing detection with hysteresis,
- * fundamental frequency tracking, and MIDI note identification.
+ * Pure mathematical algorithms for zero-crossing detection with adaptive hysteresis,
+ * sub-sample interpolation, fundamental frequency tracking, and MIDI note identification.
  *
  * Constraints:
  * - Pure functions, zero DOM dependencies, zero allocations in steady loops.
@@ -12,14 +12,10 @@
 const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 
 /**
- * Detect zero-crossing index with hysteresis to prevent false triggers from noise/harmonics.
+ * Detect zero-crossing index with hysteresis and sub-sample precision.
  * @param {Float32Array} buffer - PCM audio samples (-1.0 to 1.0)
  * @param {Object} [options] - Detection configuration
- * @param {number} [options.triggerLevel=0.0] - Target crossing amplitude
- * @param {number} [options.hysteresis=0.03] - Noise rejection band (+/-)
- * @param {number} [options.searchStart=0] - Start sample index
- * @param {number} [options.searchEnd] - Max sample index to search
- * @returns {number} Sample index where positive zero-crossing occurs, or 0 if not found
+ * @returns {number} Fractional sample index where positive zero-crossing occurs, or 0
  */
 export function findZeroCrossing(buffer, options = {}) {
   const len = buffer?.length ?? 0;
@@ -30,7 +26,7 @@ export function findZeroCrossing(buffer, options = {}) {
   const armThreshold = triggerLevel - hysteresis;
   const fireThreshold = triggerLevel + hysteresis;
 
-  const start = Math.max(0, options.searchStart ?? 0);
+  const start = Math.max(1, options.searchStart ?? 1);
   const end = Math.min(len - 1, options.searchEnd ?? Math.floor(len * 0.75));
 
   let isArmed = false;
@@ -44,14 +40,10 @@ export function findZeroCrossing(buffer, options = {}) {
       }
     } else {
       if (sample >= fireThreshold) {
-        // Linear interpolation for sub-sample trigger precision
         const prev = buffer[i - 1];
         const denom = sample - prev;
-        if (denom > 0.00001) {
-          const frac = (triggerLevel - prev) / denom;
-          return i - 1 + Math.max(0, Math.min(1, frac));
-        }
-        return i;
+        const frac = denom > 0.00001 ? (triggerLevel - prev) / denom : 0.0;
+        return (i - 1) + Math.max(0.0, Math.min(1.0, frac));
       }
     }
   }
@@ -76,10 +68,9 @@ export function estimateFundamentalFrequency(buffer, sampleRate = 44100, options
 
   const crossings = [];
   let isArmed = false;
-
   const maxSearch = Math.min(len - 1, 2048);
 
-  for (let i = 0; i < maxSearch && crossings.length < 16; ++i) {
+  for (let i = 1; i < maxSearch && crossings.length < 16; ++i) {
     const sample = buffer[i];
 
     if (!isArmed) {
@@ -87,8 +78,9 @@ export function estimateFundamentalFrequency(buffer, sampleRate = 44100, options
     } else {
       if (sample >= fireThreshold) {
         const prev = buffer[i - 1];
-        const frac = (sample - prev) > 0.0001 ? (0 - prev) / (sample - prev) : 0;
-        crossings.push(i - 1 + Math.max(0, Math.min(1, frac)));
+        const denom = sample - prev;
+        const frac = denom > 0.00001 ? (0.0 - prev) / denom : 0.0;
+        crossings.push((i - 1) + Math.max(0.0, Math.min(1.0, frac)));
         isArmed = false;
       }
     }
@@ -96,7 +88,6 @@ export function estimateFundamentalFrequency(buffer, sampleRate = 44100, options
 
   if (crossings.length < 2) return 0;
 
-  // Calculate average period distance between consecutive crossings
   let totalPeriod = 0;
   const numPeriods = crossings.length - 1;
   for (let i = 0; i < numPeriods; ++i) {
@@ -133,19 +124,22 @@ export function frequencyToNoteName(freqHz) {
  * @param {Float32Array} buffer - PCM audio buffer
  * @param {number} [sampleRate=44100] - Audio sample rate in Hz
  * @param {Object} [options] - Options (signalType, hysteresis, etc.)
- * @returns {{ triggerIndex: number, estimatedFrequencyHz: number, detectedNoteName: string }}
+ * @returns {{ triggerIndex: number, triggerFraction: number, estimatedFrequencyHz: number, detectedNoteName: string }}
  */
 export function processTrigger(buffer, sampleRate = 44100, options = {}) {
   if (options.signalType === 'control' || !buffer || buffer.length === 0) {
-    return { triggerIndex: 0, estimatedFrequencyHz: 0, detectedNoteName: '' };
+    return { triggerIndex: 0, triggerFraction: 0, estimatedFrequencyHz: 0, detectedNoteName: '' };
   }
 
-  const triggerIndex = Math.floor(findZeroCrossing(buffer, options));
+  const rawCrossing = findZeroCrossing(buffer, options);
+  const triggerIndex = Math.floor(rawCrossing);
+  const triggerFraction = rawCrossing - triggerIndex;
   const estimatedFrequencyHz = estimateFundamentalFrequency(buffer, sampleRate, options);
-  const detectedNoteName = estimatedFrequencyHz > 0 ? frequencyToNoteName(estimatedFrequencyHz) : '';
+  const detectedNoteName = frequencyToNoteName(estimatedFrequencyHz);
 
   return {
     triggerIndex,
+    triggerFraction,
     estimatedFrequencyHz,
     detectedNoteName
   };

@@ -134,6 +134,7 @@ export function createDataFrame(raw = {}, options = {}) {
     numSamples,
     sampleRate,
     triggerIndex: trigger.triggerIndex,
+    triggerFraction: trigger.triggerFraction ?? 0.0,
     estimatedFrequencyHz: trigger.estimatedFrequencyHz,
     detectedNoteName: trigger.detectedNoteName,
     spectrumDb,

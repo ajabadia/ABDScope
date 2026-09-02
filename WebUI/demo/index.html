@@ -80,17 +80,6 @@
         <button class="demo-btn" id="btn-src-bridge">Simulated C++ Bridge</button>
         <button class="demo-btn" id="btn-src-audioin">Audio In</button>
       </div>
-
-      <!-- Spectrogram Settings (Displayed under controls) -->
-      <div id="waterfall-controls" style="margin-top: 14px; padding-top: 10px; border-top: 1px solid var(--scope-border, rgba(255,255,255,0.1));">
-        <div class="control-label"><span>Waterfall Color Palette</span></div>
-        <select id="palette-select" class="demo-btn" style="width: 100%; margin-top: 4px; padding: 5px 8px; cursor: pointer;">
-          <option value="inferno" selected>Inferno (Studio Heat)</option>
-          <option value="viridis">Viridis (Perceptual)</option>
-          <option value="crt">CRT Green (Retro)</option>
-          <option value="cyberpunk">Cyberpunk (Neon)</option>
-        </select>
-      </div>
     </aside>
 
     <!-- Visualizer Viewport -->
@@ -110,7 +99,6 @@
     let currentScope = null;
     let currentMountMode = 'embedded';
     let bridgeSimInterval = null;
-    let specRendererInstance = null;
 
     function initScope(mountMode = 'embedded') {
       if (currentScope) {
@@ -140,15 +128,11 @@
         }
       });
 
-      specRendererInstance = new SpectrogramRenderer();
-      const palSelect = document.getElementById('palette-select');
-      if (palSelect) specRendererInstance.palette = palSelect.value;
-
       currentScope.registerRenderer('oscilloscope', new OscilloscopeRenderer());
       currentScope.registerRenderer('spectrum', new SpectrumRenderer());
       currentScope.registerRenderer('lissajous', new LissajousRenderer());
       currentScope.registerRenderer('phase', new PhaseMeterRenderer());
-      currentScope.registerRenderer('spectrogram', specRendererInstance);
+      currentScope.registerRenderer('spectrogram', new SpectrogramRenderer());
 
       if (mountMode === 'floating') {
         currentScope.open();
@@ -271,13 +255,6 @@
     // Theme Switcher in Header
     document.getElementById('theme-select').onchange = (e) => {
       document.body.setAttribute('data-theme', e.target.value);
-    };
-
-    // Spectrogram Palette Selector (Live update without resetting tab)
-    document.getElementById('palette-select').onchange = (e) => {
-      if (specRendererInstance) {
-        specRendererInstance.palette = e.target.value;
-      }
     };
 
     // Source Modes

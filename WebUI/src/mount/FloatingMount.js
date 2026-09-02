@@ -28,6 +28,7 @@ export class FloatingMount {
 
     this._createDOM();
     this._initDragging();
+    this._initResizeObserver();
   }
 
   _createDOM() {
@@ -140,6 +141,22 @@ export class FloatingMount {
     });
   }
 
+  _initResizeObserver() {
+    if (typeof ResizeObserver === 'undefined') return;
+
+    this.resizeObserver = new ResizeObserver((entries) => {
+      if (this.isDestroyed || !this.isOpen || !entries[0]) return;
+      const rect = entries[0].contentRect;
+      if (rect.width > 0 && rect.height > 0) {
+        const dpr = typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1;
+        this.onResize(rect.width, rect.height, dpr);
+      }
+    });
+
+    const bodyElem = this.widget.querySelector('.abd-scope-body') || this.widget;
+    this.resizeObserver.observe(bodyElem);
+  }
+
   open() {
     if (this.isDestroyed) return;
     this.isOpen = true;
@@ -148,7 +165,7 @@ export class FloatingMount {
 
     const rect = this.widget.querySelector('.abd-scope-body').getBoundingClientRect();
     const dpr = typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1;
-    this.onResize(rect.width || 400, rect.height || 150, dpr);
+    this.onResize(rect.width || 450, rect.height || 180, dpr);
   }
 
   close() {
@@ -167,6 +184,10 @@ export class FloatingMount {
 
   destroy() {
     this.isDestroyed = true;
+    if (this.resizeObserver) {
+      this.resizeObserver.disconnect();
+      this.resizeObserver = null;
+    }
     this.close();
     if (this.widget && this.widget.parentNode) {
       this.widget.parentNode.removeChild(this.widget);

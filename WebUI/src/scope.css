@@ -96,7 +96,13 @@
   position: fixed;
   top: 70px;
   right: 24px;
-  width: 420px;
+  width: 480px;
+  height: 260px;
+  min-width: 380px;
+  min-height: 190px;
+  max-width: 90vw;
+  max-height: 90vh;
+  resize: both;
   background: var(--scope-bg);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
@@ -108,6 +114,12 @@
   z-index: 1500;
   overflow: hidden;
   animation: abdScopeFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.abd-scope-floating .abd-scope-body {
+  flex: 1 1 auto;
+  min-height: 100px;
+  position: relative;
 }
 
 @keyframes abdScopeFadeIn {
