@@ -26,8 +26,8 @@ target_compile_definitions(ABDScopeCore INTERFACE
 )
 
 target_compile_options(ABDScopeCore INTERFACE
-  $<$<CXX_COMPILER_ID:MSVC>:/W4:/permissive-:/Zc:__cplusplus:/Zc:inline>
-  $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-Wall:-Wextra:-Wpedantic:-Wconversion:-Wshadow>
+  $<$<CXX_COMPILER_ID:MSVC>:/W4;/wd4324;/permissive-;/Zc:__cplusplus;/Zc:inline>
+  $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-Wall;-Wextra;-Wpedantic;-Wconversion;-Wshadow>
 )
 
 if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")

@@ -16,4 +16,6 @@ add_subdirectory(Source)
 # Target Alias for clean consumer integration: ABDScope::ABDScopeCore
 add_library(ABDScope::ABDScopeCore ALIAS ABDScopeCore)
 
-enable_testing()
+# Standalone C++ Smoke Test (MSVC Validation)
+add_executable(ABDScope_CppSmoke Source/tests/StandaloneSmoke.cpp)
+target_link_libraries(ABDScope_CppSmoke PRIVATE ABDScopeCore)
