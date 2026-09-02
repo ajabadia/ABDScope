@@ -2,7 +2,7 @@
  * ABDScope Standalone Test Signal Generator
  * =========================================
  * Generates synthetic tones (Sine, Saw, Square, Triangle, Noise, FM, Mic, True Stereo Phase)
- * and simulates C++ Bridge IPC packets for offline testing.
+ * and simulates continuous C++ Bridge IPC streams for testing.
  */
 
 export class TestSignalGenerator {
@@ -24,7 +24,8 @@ export class TestSignalGenerator {
     this.frequency = 440;
     this.level = 0.5;
     this.fmAmount = 0;
-    this.stereoPhaseDeg = 0; // 0 = mono (+1.0), 90 = wide (0.0), 180 = anti-phase (-1.0)
+    this.stereoPhaseDeg = 0;
+    this.simSampleIndex = 0;
   }
 
   async init() {
@@ -52,8 +53,6 @@ export class TestSignalGenerator {
 
     this.merger = this.audioCtx.createChannelMerger(2);
 
-    // Routing: masterGain -> L -> analyserL -> merger[0] -> destination
-    //                     -> R -> delayR -> analyserR -> merger[1] -> destination
     this.masterGain.connect(this.analyserL);
     this.masterGain.connect(this.delayR);
     this.delayR.connect(this.analyserR);
@@ -181,22 +180,23 @@ export class TestSignalGenerator {
   }
 
   /**
-   * Helper to simulate a streaming C++ IPC packet with real stereo phase offset.
-   * @param {number} [timeMs] - Elapsed time
+   * Helper to simulate a continuous streaming C++ IPC packet.
    * @returns {Object} Raw packet ready for scope.pushFrame()
    */
-  generateSimulatedBridgePacket(timeMs = 0) {
-    const numSamples = 512;
+  generateSimulatedBridgePacket() {
+    const numSamples = 1024;
     const sampleRate = 44100;
     const timeDataL = new Float32Array(numSamples);
     const timeDataR = new Float32Array(numSamples);
 
     const freq = this.frequency;
-    const tSec = timeMs * 0.001;
     const rad = (this.stereoPhaseDeg * Math.PI) / 180.0;
+    const startSample = this.simSampleIndex || 0;
+    this.simSampleIndex = (startSample + numSamples) % (sampleRate * 100);
 
     for (let i = 0; i < numSamples; ++i) {
-      const phase = 2 * Math.PI * freq * ((i / sampleRate) + tSec);
+      const sIdx = startSample + i;
+      const phase = 2 * Math.PI * freq * (sIdx / sampleRate);
       let valL = Math.sin(phase);
       let valR = Math.sin(phase + rad);
 
@@ -206,6 +206,12 @@ export class TestSignalGenerator {
       } else if (this.waveform === 'square') {
         valL = Math.sin(phase) >= 0 ? 0.9 : -0.9;
         valR = Math.sin(phase + rad) >= 0 ? 0.9 : -0.9;
+      } else if (this.waveform === 'triangle') {
+        valL = (2 / Math.PI) * Math.asin(Math.sin(phase));
+        valR = (2 / Math.PI) * Math.asin(Math.sin(phase + rad));
+      } else if (this.waveform === 'noise') {
+        valL = (Math.random() * 2 - 1) * 0.5;
+        valR = (Math.random() * 2 - 1) * 0.5;
       }
 
       timeDataL[i] = this.level * valL;

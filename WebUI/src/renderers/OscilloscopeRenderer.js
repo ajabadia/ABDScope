@@ -2,7 +2,7 @@
  * ABDScope Oscilloscope Renderer
  * ==============================
  * High-performance time-domain visualizer with analog phosphor persistence,
- * sub-sample zero-crossing phase lock, stereo overlay, and dynamic theme tokens.
+ * sub-sample zero-crossing phase lock, auto-period cycle scaling, and theme colors.
  *
  * Constraints:
  * - Zero allocations in steady-state render() loops.
@@ -17,6 +17,8 @@ export class OscilloscopeRenderer extends BaseRenderer {
     this.gain = 1.0;
     this.timebase = 1.0;
     this.persistence = 0.0;
+    this.autoFit = true; // Auto-lock to integer wave cycles for rock-solid stability
+    this.targetCycles = 4;
   }
 
   render(frame, options = {}) {
@@ -53,21 +55,36 @@ export class OscilloscopeRenderer extends BaseRenderer {
     const numSamples = frame.numSamples || timeDataL?.length || 0;
     if (numSamples <= 2) return;
 
-    // Sub-sample phase lock for zero-crossing
+    // 3. Precise Zero-Crossing Sub-Sample Alignment
     const triggerOffset = isControl ? 0 : (frame.triggerIndex || 0);
     const subSampleFrac = isControl ? 0.0 : (frame.triggerFraction || 0.0);
 
-    const timebaseFactor = options.timebase || this.timebase;
-    const visibleSamples = Math.min(
-      numSamples - triggerOffset - 2,
-      Math.max(8, Math.floor(numSamples * timebaseFactor))
-    );
+    // 4. Auto-Fit Cycle Locking (eliminates right-to-left drift)
+    let visibleSamples;
+    const autoFit = options.autoFit ?? this.autoFit;
+    const freq = frame.estimatedFrequencyHz || 0;
+
+    if (autoFit && !isControl && freq >= 20 && freq <= 15000) {
+      const sampleRate = frame.sampleRate || 44100;
+      const periodSamples = sampleRate / freq;
+      const cycles = options.cycles || this.targetCycles;
+      const targetSamples = Math.round(periodSamples * cycles);
+      const maxAvailable = numSamples - triggerOffset - 2;
+      visibleSamples = Math.max(16, Math.min(maxAvailable, targetSamples));
+    } else {
+      const timebaseFactor = options.timebase || this.timebase;
+      visibleSamples = Math.min(
+        numSamples - triggerOffset - 2,
+        Math.max(8, Math.floor(numSamples * timebaseFactor))
+      );
+    }
+
     if (visibleSamples <= 2) return;
 
     const gainFactor = options.gain || this.gain;
     const stepX = w / (visibleSamples - 1);
 
-    // 3. Render Channel R (if stereo audio)
+    // 5. Render Channel R (Stereo audio)
     if (timeDataR && options.channel !== 'Left' && !isControl) {
       ctx.save();
       ctx.lineWidth = 1.6;
@@ -75,7 +92,7 @@ export class OscilloscopeRenderer extends BaseRenderer {
       ctx.beginPath();
 
       for (let i = 0; i < visibleSamples; ++i) {
-        const sPos = triggerOffset + i - subSampleFrac;
+        const sPos = triggerOffset + i + subSampleFrac;
         const i0 = Math.max(0, Math.floor(sPos));
         const i1 = Math.min(numSamples - 1, i0 + 1);
         const f = sPos - i0;
@@ -90,7 +107,7 @@ export class OscilloscopeRenderer extends BaseRenderer {
       ctx.restore();
     }
 
-    // 4. Render Channel L / Mono / CV Signal
+    // 6. Render Channel L / Mono / CV Signal
     if (timeDataL && options.channel !== 'Right') {
       ctx.save();
       ctx.lineWidth = isControl ? 2.5 : 2.0;
@@ -100,7 +117,7 @@ export class OscilloscopeRenderer extends BaseRenderer {
       ctx.beginPath();
 
       for (let i = 0; i < visibleSamples; ++i) {
-        const sPos = triggerOffset + i - subSampleFrac;
+        const sPos = triggerOffset + i + subSampleFrac;
         const i0 = Math.max(0, Math.floor(sPos));
         const i1 = Math.min(numSamples - 1, i0 + 1);
         const f = sPos - i0;
@@ -113,7 +130,7 @@ export class OscilloscopeRenderer extends BaseRenderer {
       }
       ctx.stroke();
 
-      // Subtle glow effect
+      // Phosphor Glow
       ctx.shadowBlur = persist > 0.3 ? 6 : 3;
       ctx.shadowColor = ctx.strokeStyle;
       ctx.stroke();
