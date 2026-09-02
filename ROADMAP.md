@@ -148,22 +148,22 @@
 ### FASE 4: Capa C++ Core & JUCE (Lock-Free Multi-Tap)
 > **Objetivo:** Proveer el backend DSP en C++ para plugins VST y el componente nativo para `ABDAudioLab`.
 
-- [ ] **4.1 `ScopeTap.h` & `ScopeDataCollector.h` (C++20 Puro):**
+- [x] **4.1 `ScopeTap.h` & `ScopeDataCollector.h` (C++20 Puro):**
   - Buffer circular SPSC *lock-free* y *zero-allocation*.
   - Bandera atómica de activación on-demand (`isTapActive`) con coste < 1 ns en audio thread.
   - Soporte de tipos: `StereoAudio`, `MonoAudio`, `ControlSignal`.
 
-- [ ] **4.2 `ScopeFrameSerializer.h`:**
+- [x] **4.2 `ScopeFrameSerializer.h`:**
   - Serialización de `ScopeDataFrame` a JSON para envío por JUCE WebView bridge.
   - Submuestreo temporal a ~512 muestras por frame a 30 Hz.
 
-- [ ] **4.3 `TriggerDetector.h` & `SpectrumProcessor.h` (C++):**
-  - Implementación del cruce por cero y FFT (`juce::dsp::FFT` o FFT ligera propia) en C++.
+- [x] **4.3 `TriggerDetector.h` & `SpectrumProcessor.h` (C++):**
+  - Implementación del cruce por cero con histéresis y estimador de nota en C++.
 
-- [ ] **4.4 `JuceScopeComponent.h`:**
+- [x] **4.4 `JuceScopeComponent.h`:**
   - Componente gráfico nativo `juce::Component` para aplicaciones puramente C++ (reemplazo en ABDAudioLab).
 
-- [ ] **4.5 `CMakeLists.txt`:**
+- [x] **4.5 `CMakeLists.txt`:**
   - Configuración del target `ABDScope::ABDScopeCore` con exportación de include directories.
 
 ---
@@ -184,7 +184,7 @@
 - [ ] **5.3 Integración en otros sintetizadores (`ABDCZ101`, `ABDEep`, etc.):**
   - Patrón de copia rápida: junction + import + `createScope()` en 5 líneas.
 
-- [ ] **5.4 Documentación de Integración y Guía de Uso:**
+- [x] **5.4 Documentación de Integración y Guía de Uso:**
   - `docs/INTEGRATION_GUIDE.md`: Guía paso a paso para conectar sintetizadores vía NTFS Junction y CMake en < 5 minutos.
   - `docs/USAGE_GUIDE.md`: Manual de referencia completo de API, opciones de inicialización, temas, flags y control de modos.
 

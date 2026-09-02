@@ -32,20 +32,19 @@
 
 - [x] **Phase 1 (Core Engine & Web Base)**: Completed (Scaffold, trigger, frame normalizer, dual inputs, HiDPI base renderer, mounts, demo harness, wire protocol).
 - [x] **Phase 2 (Fundamental Renderers)**: Completed (Oscilloscope, Logarithmic FFT Spectrum, stereo VuMeter).
-- [x] **Phase 3 (Advanced Modes, Theming & Extras)**: Completed:
-  - [x] **Phase 3.1**: `LissajousRenderer.js` (Rotated 45° M/S Goniometer & Vectorscope with CRT phosphor).
-  - [x] **Phase 3.2**: `PhaseMeterRenderer.js` (Ballistic stereo phase correlation meter).
-  - [x] **Phase 3.3**: Theming presets (MS2000, CZ-101, DeepMind, AudioLab).
-  - [x] **Phase 3.4**: `SpectrogramRenderer.js` (Time-frequency waterfall cascade).
-  - [x] **Phase 3.5**: `exportImage.js` (`captureFrame()` to clipboard & `downloadFrame()` to PNG).
+- [x] **Phase 3 (Advanced Modes, Theming & Extras)**: Completed (Lissajous 45° Vectorscope, Phase Correlation Meter, Spectrogram Waterfall, Frame Capture to Clipboard/PNG, Theme Presets).
+- [x] **Phase 4 (C++ Core & JUCE Lock-Free Multi-Tap)**: Completed:
+  - [x] **Phase 4.1**: `Source/Core/SpscRingBuffer.h`, `ScopeTap.h` & `ScopeDataCollector.h` (C++20 lock-free SPSC multi-tap on-demand buffer).
+  - [x] **Phase 4.2**: `Source/Core/ScopeFrameSerializer.h` (JSON serialization & sample decimation on message thread).
+  - [x] **Phase 4.3**: `Source/Core/TriggerDetector.h` (Pure C++ zero-crossing detector with hysteresis and pitch estimation).
+  - [x] **Phase 4.4**: `Source/JUCE/JuceScopeComponent.h` (Native JUCE C++ component for pure C++ hosts).
+  - [x] **Phase 4.5**: `CMakeLists.txt` (`ABDScope::ABDScopeCore` library target).
+  - [x] **Phase 4.6**: `docs/INTEGRATION_GUIDE.md` & `docs/USAGE_GUIDE.md` established.
 
-### Next Target: FASE 4 (C++ Core & JUCE Lock-Free Multi-Tap)
-- [ ] **Phase 4.1**: Implement `Source/Core/ScopeTap.h` & `ScopeDataCollector.h` (C++20 lock-free SPSC multi-tap on-demand buffer).
-- [ ] **Phase 4.2**: Implement `Source/Core/ScopeFrameSerializer.h` (JSON serialization & sample decimation).
-- [ ] **Phase 4.3**: Implement `Source/Core/TriggerDetector.h` (Pure C++ zero-crossing detector).
-- [ ] **Phase 4.4**: Implement `Source/JUCE/JuceScopeComponent.h` (Native JUCE C++ component for ABDAudioLab).
-- [ ] **Phase 4.5**: Create `Source/CMakeLists.txt` (`ABDScope::ABDScopeCore` library target).
-- [ ] **Phase 4.6**: Setup `docs/INTEGRATION_GUIDE.md` & `docs/USAGE_GUIDE.md`.
+### Next Target: FASE 5 (Integration into Suite & Real-World Validation)
+- [ ] **Phase 5.1**: Integrate into `ABDMS2000` (Junction NTFS, replace `OscilloscopeModal.js` and `panelScope.js`, wire C++ tap in `processBlock`).
+- [ ] **Phase 5.2**: Integrate into `ABDAudioLab` (CMake `add_subdirectory`, replace `LiveSpectrumAnalyzer` and `SoundIdCurvePlotter` spectrum tab).
+- [ ] **Phase 5.3**: Rapid integration pattern for `ABDCZ101`, `ABDEep`, `ABDJUNiO601`.
 
 ---
 
