@@ -9,12 +9,13 @@ namespace abd::scope {
 
 struct TriggerResult {
     size_t triggerIndex { 0 };
+    float triggerFraction { 0.0f };
     float estimatedFrequencyHz { 0.0f };
     std::string_view noteName { "" };
 };
 
 /**
- * Pure C++ Zero-Crossing Detector with Hysteresis & Fundamental Pitch Estimator.
+ * Pure C++ Zero-Crossing Detector with Hysteresis, Sub-Sample Phase Lock & Pitch Estimator.
  */
 class TriggerDetector final {
 public:
@@ -45,9 +46,13 @@ public:
 
             // 2. Fire on rising zero-crossing
             if (isArmArmed && prev <= 0.0f && curr > 0.0f) {
+                const float dy = curr - prev;
+                const float frac = dy > 1e-5f ? (-prev / dy) : 0.0f;
+
                 if (triggerCount == 0) {
                     firstTrigger = i;
                     result.triggerIndex = i;
+                    result.triggerFraction = frac;
                 } else if (triggerCount == 1) {
                     secondTrigger = i;
                 }

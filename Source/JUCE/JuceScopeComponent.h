@@ -20,7 +20,8 @@ enum class NativeScopeMode {
 
 /**
  * Native JUCE GUI Component for pure C++ hosts (e.g. ABDAudioLab).
- * Zero WebView2 dependencies — renders directly via juce::Graphics at 30-60 FPS.
+ * Zero WebView2 dependencies — renders directly via juce::Graphics with sub-sample
+ * phase-locking, adaptive octave scaling, and stereo M/S vectorscope.
  */
 class JuceScopeComponent : public juce::Component,
                            private juce::Timer
@@ -56,8 +57,9 @@ public:
         repaint();
     }
 
-    void setTraceColour(juce::Colour colour) noexcept {
-        m_traceColour = colour;
+    void setTraceColour(juce::Colour colourL, juce::Colour colourR = juce::Colour(0xffff007f)) noexcept {
+        m_traceColourL = colourL;
+        m_traceColourR = colourR;
         repaint();
     }
 
@@ -119,25 +121,72 @@ public:
 private:
     void paintOscilloscope(juce::Graphics& g, float w, float h, float midY) {
         const size_t numSamples = m_samplesL.size();
-        const size_t triggerOffset = m_triggerResult.triggerIndex;
-        const size_t visibleSamples = (numSamples > triggerOffset + 2) ? (numSamples - triggerOffset - 2) : numSamples;
-        if (visibleSamples < 2) return;
+        if (numSamples < 16) return;
 
-        const float stepX = w / static_cast<float>(visibleSamples - 1);
+        const size_t triggerOffset = m_triggerResult.triggerIndex;
+        const float frac = m_triggerResult.triggerFraction;
+        const float freq = m_triggerResult.estimatedFrequencyHz;
+
+        // Adaptive cycle scaling by octave (identically to WebUI)
+        size_t samplesToDisplay = numSamples - triggerOffset;
+        if (freq > 20.0f && m_sampleRate > 0.0f) {
+            const float cycleSamples = m_sampleRate / freq;
+            float targetCycles = 4.0f;
+            if (freq < 80.0f) targetCycles = 1.0f;
+            else if (freq < 180.0f) targetCycles = 2.0f;
+            else if (freq < 500.0f) targetCycles = 3.0f;
+            else if (freq < 1200.0f) targetCycles = 5.0f;
+            else targetCycles = 8.0f;
+
+            const size_t needed = static_cast<size_t>(std::round(cycleSamples * targetCycles));
+            if (needed >= 16 && (triggerOffset + needed + 2) <= numSamples) {
+                samplesToDisplay = needed;
+            }
+        }
+
+        if (samplesToDisplay < 2) return;
+        const float stepX = w / static_cast<float>(samplesToDisplay - 1);
         const float scaleY = midY * 0.88f;
 
-        juce::Path wavePath;
-        for (size_t i = 0; i < visibleSamples; ++i) {
-            const float sample = m_samplesL[triggerOffset + i];
+        // Render Left Channel
+        juce::Path wavePathL;
+        for (size_t i = 0; i < samplesToDisplay; ++i) {
+            const float sPos = static_cast<float>(triggerOffset + i) + frac;
+            const size_t idx0 = static_cast<size_t>(sPos);
+            const size_t idx1 = std::min(idx0 + 1, numSamples - 1);
+            const float interpFrac = sPos - static_cast<float>(idx0);
+
+            const float sample = (1.0f - interpFrac) * m_samplesL[idx0] + interpFrac * m_samplesL[idx1];
             const float x = static_cast<float>(i) * stepX;
             const float y = midY - (sample * scaleY);
 
-            if (i == 0) wavePath.startNewSubPath(x, y);
-            else wavePath.lineTo(x, y);
+            if (i == 0) wavePathL.startNewSubPath(x, y);
+            else wavePathL.lineTo(x, y);
         }
 
-        g.setColour(m_traceColour);
-        g.strokePath(wavePath, juce::PathStrokeType(1.8f));
+        g.setColour(m_traceColourL);
+        g.strokePath(wavePathL, juce::PathStrokeType(1.8f));
+
+        // Render Right Channel (Stereo Overlay)
+        if (!m_samplesR.empty()) {
+            juce::Path wavePathR;
+            for (size_t i = 0; i < samplesToDisplay; ++i) {
+                const float sPos = static_cast<float>(triggerOffset + i) + frac;
+                const size_t idx0 = static_cast<size_t>(sPos);
+                const size_t idx1 = std::min(idx0 + 1, numSamples - 1);
+                const float interpFrac = sPos - static_cast<float>(idx0);
+
+                const float sample = (1.0f - interpFrac) * m_samplesR[idx0] + interpFrac * m_samplesR[idx1];
+                const float x = static_cast<float>(i) * stepX;
+                const float y = midY - (sample * scaleY);
+
+                if (i == 0) wavePathR.startNewSubPath(x, y);
+                else wavePathR.lineTo(x, y);
+            }
+
+            g.setColour(m_traceColourR.withAlpha(0.65f));
+            g.strokePath(wavePathR, juce::PathStrokeType(1.4f));
+        }
     }
 
     void paintSpectrum(juce::Graphics& g, float w, float h) {
@@ -157,12 +206,12 @@ private:
         specPath.closeSubPath();
 
         // Gradient Fill
-        juce::ColourGradient grad(m_traceColour.withAlpha(0.35f), 0.0f, 0.0f,
+        juce::ColourGradient grad(m_traceColourL.withAlpha(0.35f), 0.0f, 0.0f,
                                   juce::Colours::transparentBlack, 0.0f, h, false);
         g.setGradientFill(grad);
         g.fillPath(specPath);
 
-        g.setColour(m_traceColour);
+        g.setColour(m_traceColourL);
         g.strokePath(specPath, juce::PathStrokeType(1.6f));
     }
 
@@ -186,7 +235,7 @@ private:
             else lissPath.lineTo(px, py);
         }
 
-        g.setColour(m_traceColour.withAlpha(0.85f));
+        g.setColour(m_traceColourL.withAlpha(0.85f));
         g.strokePath(lissPath, juce::PathStrokeType(1.2f));
     }
 
@@ -254,7 +303,8 @@ private:
     ScopeTap* m_tap { nullptr };
     float m_sampleRate { 44100.0f };
     NativeScopeMode m_mode { NativeScopeMode::Oscilloscope };
-    juce::Colour m_traceColour { 0xff00c3ff };
+    juce::Colour m_traceColourL { 0xff00c3ff };
+    juce::Colour m_traceColourR { 0xffff007f };
     juce::Colour m_bgColour { 0xff080c12 };
 
     std::vector<float> m_samplesL;
