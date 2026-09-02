@@ -1,18 +1,17 @@
 /**
- * ABDScope Embedded Mount Strategy
- * ================================
- * Inlines the visualizer directly into a synthesizer panel or dashboard container.
- * Manages responsive ResizeObserver and auto-collapsing mode tabs.
+ * ABDScope Embedded Mount
+ * =======================
+ * Embeds the scope component directly within a designated DOM container element.
+ * Auto-observes container bounds and resizes the backing canvas cleanly.
  *
  * Constraints:
- * - Pure DOM mount wrapper, zero audio processing logic.
- * - Under 150 lines of code (Single Responsibility Principle).
+ * - Pure view coordinator, under 160 lines of code.
  */
 
 export class EmbeddedMount {
   /**
-   * @param {HTMLElement|string} container - Target container element or ID
-   * @param {Object} options - Mount options (enabledModes, showVuMeters, etc.)
+   * @param {string|HTMLElement} container - DOM element or element ID
+   * @param {Object} options - Mount configuration
    */
   constructor(container, options = {}) {
     this.container = typeof container === 'string'
@@ -20,13 +19,14 @@ export class EmbeddedMount {
       : container;
 
     if (!this.container) {
-      throw new Error('[ABDScope:EmbeddedMount] Target container element not found');
+      throw new Error(`[ABDScope:EmbeddedMount] Container element not found: "${container}"`);
     }
 
     this.options = options;
     this.onModeSelect = options.onModeSelect || (() => {});
     this.onResize = options.onResize || (() => {});
     this.onFreezeToggle = options.onFreezeToggle || (() => {});
+    this.onSnapshot = options.onSnapshot || (() => {});
 
     this.wrapper = null;
     this.canvas = null;
@@ -60,6 +60,14 @@ export class EmbeddedMount {
               <button class="abd-scope-tab-btn" data-mode="${m}">${m.toUpperCase()}</button>
             `).join('') : ''}
             ${this.options.showFreeze ? '<button class="abd-scope-freeze-btn" id="scope-freeze-btn">FREEZE</button>' : ''}
+            ${this.options.showSnapshot !== false ? `
+              <button class="abd-scope-snapshot-btn" id="scope-snapshot-btn" title="Capture PNG Snapshot">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+                  <circle cx="12" cy="13" r="4"/>
+                </svg>
+              </button>
+            ` : ''}
           </div>
         </div>
       `;
@@ -79,19 +87,25 @@ export class EmbeddedMount {
     this.tabsContainer = this.wrapper.querySelector('.abd-scope-tabs');
     this.noteTag = this.wrapper.querySelector('#scope-note-tag');
 
-    // Bind tab clicks
+    // Bind clicks
     if (this.tabsContainer) {
       this.tabsContainer.addEventListener('click', (e) => {
-        const btn = e.target.closest('.abd-scope-tab-btn');
-        if (btn) {
-          const mode = btn.dataset.mode;
+        const tabBtn = e.target.closest('.abd-scope-tab-btn');
+        if (tabBtn) {
+          const mode = tabBtn.dataset.mode;
           this.setActiveTab(mode);
           this.onModeSelect(mode);
+          return;
         }
-        if (e.target.id === 'scope-freeze-btn') {
-          const isFrozen = e.target.classList.toggle('active');
-          e.target.textContent = isFrozen ? 'RESUME' : 'FREEZE';
+        if (e.target.closest('#scope-freeze-btn')) {
+          const btn = e.target.closest('#scope-freeze-btn');
+          const isFrozen = btn.classList.toggle('active');
+          btn.textContent = isFrozen ? 'RESUME' : 'FREEZE';
           this.onFreezeToggle(isFrozen);
+          return;
+        }
+        if (e.target.closest('#scope-snapshot-btn')) {
+          this.onSnapshot();
         }
       });
     }
@@ -143,9 +157,8 @@ export class EmbeddedMount {
     }
     this.wrapper = null;
     this.canvas = null;
+    this.vuContainer = null;
+    this.tabsContainer = null;
     this.container = null;
-    this.onModeSelect = null;
-    this.onResize = null;
-    this.onFreezeToggle = null;
   }
 }

@@ -56,6 +56,12 @@ export function createScope(config = {}) {
     isFrozen = frozen;
   };
 
+  const onSnapshot = () => {
+    if (mount && mount.canvas) {
+      downloadCanvasAsPng(mount.canvas, 'abd-scope-capture.png');
+    }
+  };
+
   // Mount instantiation
   const mountOptions = {
     ...config,
@@ -63,7 +69,8 @@ export function createScope(config = {}) {
     defaultMode: currentMode,
     onModeSelect,
     onResize,
-    onFreezeToggle
+    onFreezeToggle,
+    onSnapshot
   };
 
   const mount = mountMode === 'floating'

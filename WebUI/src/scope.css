@@ -26,6 +26,7 @@
 .theme-ms2000 {
   --scope-bg: #080c14;
   --scope-surface: #0d1522;
+  --scope-surface-elevated: #152236;
   --scope-accent: #00c3ff;
   --scope-accent-hover: #38d3ff;
   --scope-trace-l: #00c3ff;
@@ -38,6 +39,7 @@
 .theme-cz101 {
   --scope-bg: #12080a;
   --scope-surface: #1e0d11;
+  --scope-surface-elevated: #2c1218;
   --scope-accent: #ff3344;
   --scope-accent-hover: #ff5566;
   --scope-trace-l: #ff3344;
@@ -50,6 +52,7 @@
 .theme-deepmind {
   --scope-bg: #140e06;
   --scope-surface: #22170a;
+  --scope-surface-elevated: #32220f;
   --scope-accent: #ffaa00;
   --scope-accent-hover: #ffbb33;
   --scope-trace-l: #ffaa00;
@@ -62,12 +65,34 @@
 .theme-audiolab {
   --scope-bg: #06120a;
   --scope-surface: #0d1e12;
+  --scope-surface-elevated: #132c1a;
   --scope-accent: #00e676;
   --scope-accent-hover: #33eb91;
   --scope-trace-l: #00e676;
   --scope-trace-r: #00c3ff;
   --scope-spectrum: #00e676;
   --scope-border: rgba(0, 230, 118, 0.3);
+}
+
+/* ─── Global Theme-Aware Scrollbars ─── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--scope-bg);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--scope-surface-elevated);
+  border: 1px solid var(--scope-border);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--scope-accent);
+}
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scope-border) var(--scope-bg);
 }
 
 /* Root Component Frame */
@@ -98,10 +123,10 @@
   right: 24px;
   width: 480px;
   height: 260px;
-  min-width: 380px;
-  min-height: 190px;
-  max-width: 90vw;
-  max-height: 90vh;
+  min-width: 340px;
+  min-height: 180px;
+  max-width: 95vw;
+  max-height: 95vh;
   resize: both;
   background: var(--scope-bg);
   backdrop-filter: blur(14px);
@@ -116,25 +141,22 @@
   animation: abdScopeFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.abd-scope-floating .abd-scope-body {
-  flex: 1 1 auto;
-  min-height: 100px;
-  position: relative;
-}
-
 @keyframes abdScopeFadeIn {
   from { opacity: 0; transform: translateY(-8px) scale(0.98); }
   to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
-/* Header & Controls */
+/* ─── Header & Controls ─── */
 .abd-scope-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 6px 10px;
-  background: rgba(0, 0, 0, 0.45);
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 5px 8px;
+  background: rgba(0, 0, 0, 0.55);
   border-bottom: 1px solid var(--scope-border);
+  flex-shrink: 0;
 }
 
 .abd-scope-floating .abd-scope-header {
@@ -149,14 +171,16 @@
   justify-content: space-between;
   align-items: center;
   width: 100%;
+  gap: 6px;
 }
 
 .abd-scope-header-bottom {
   display: flex;
-  justify-content: flex-start;
+  justify-content: space-between;
   align-items: center;
+  flex-wrap: wrap;
   width: 100%;
-  overflow-x: auto;
+  gap: 4px;
 }
 
 .abd-scope-drag-handle {
@@ -166,11 +190,12 @@
 .abd-scope-title {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.8px;
   color: var(--scope-accent);
+  white-space: nowrap;
 }
 
 .abd-scope-indicator {
@@ -189,39 +214,46 @@
   font-size: 10px;
   font-weight: bold;
   background: rgba(0, 0, 0, 0.6);
-  padding: 2px 8px;
+  padding: 2px 6px;
   border-radius: 3px;
   border: 1px solid var(--scope-border);
   color: var(--color-lcd-text, #54ff72);
-  min-width: 95px;
-  text-align: center;
   white-space: nowrap;
 }
 
 .abd-scope-controls,
-.abd-scope-tabs {
+.abd-scope-tabs,
+.abd-scope-actions {
   display: flex;
   align-items: center;
-  gap: 4px;
+  flex-wrap: wrap;
+  gap: 3px;
 }
 
 .abd-scope-tab-btn,
-.abd-scope-freeze-btn {
+.abd-scope-freeze-btn,
+.abd-scope-snapshot-btn {
   background: var(--scope-surface);
   border: 1px solid var(--scope-border);
   color: var(--scope-text-muted);
   font-size: 9px;
   font-weight: 700;
-  padding: 3px 8px;
+  padding: 3px 6px;
   border-radius: 3px;
   cursor: pointer;
   transition: all 0.15s ease;
   white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  min-height: 20px;
 }
 
 .abd-scope-tab-btn.active,
 .abd-scope-tab-btn:hover,
-.abd-scope-freeze-btn.active {
+.abd-scope-freeze-btn.active,
+.abd-scope-snapshot-btn:hover {
   background: var(--scope-accent);
   color: #000;
   border-color: var(--scope-accent);
@@ -233,7 +265,7 @@
   color: var(--scope-text-muted);
   font-size: 14px;
   line-height: 1;
-  padding: 2px 6px;
+  padding: 2px 4px;
   border-radius: 3px;
   cursor: pointer;
   display: flex;
@@ -246,10 +278,11 @@
   background: rgba(255, 255, 255, 0.1);
 }
 
-/* Visualizer Body & Canvas */
+/* ─── Visualizer Body & Canvas ─── */
 .abd-scope-body {
   position: relative;
-  flex: 1;
+  flex: 1 1 auto;
+  min-height: 0;
   display: flex;
   background: #000000;
   overflow: hidden;
@@ -259,14 +292,16 @@
   display: block;
   width: 100%;
   height: 100%;
+  flex: 1 1 auto;
 }
 
 .abd-scope-vu-container {
-  width: 28px;
+  width: 24px;
   border-left: 1px solid var(--scope-border);
   background: rgba(0, 0, 0, 0.4);
   display: flex;
-  padding: 6px 4px;
-  gap: 3px;
+  padding: 4px 2px;
+  gap: 2px;
   box-sizing: border-box;
+  flex-shrink: 0;
 }

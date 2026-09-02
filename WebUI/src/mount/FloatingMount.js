@@ -1,18 +1,13 @@
 /**
- * ABDScope Floating Modal Mount Strategy
- * ======================================
- * Renders a draggable, floating modal widget into the DOM (e.g. document.body).
- * Provides open(), close(), and toggle() methods with header drag support.
+ * ABDScope Floating Modal Mount
+ * =============================
+ * Renders the scope inside a draggable, resizable, floating desktop modal with close button.
  *
  * Constraints:
- * - Pure DOM wrapper, zero audio processing logic.
- * - Under 170 lines of code (Single Responsibility Principle).
+ * - Pure view coordinator, under 180 lines of code.
  */
 
 export class FloatingMount {
-  /**
-   * @param {Object} options - Mount configuration
-   */
   constructor(options = {}) {
     this.options = options;
     this.isOpen = false;
@@ -21,10 +16,13 @@ export class FloatingMount {
     this.onModeSelect = options.onModeSelect || (() => {});
     this.onResize = options.onResize || (() => {});
     this.onClose = options.onClose || (() => {});
+    this.onFreezeToggle = options.onFreezeToggle || (() => {});
+    this.onSnapshot = options.onSnapshot || (() => {});
 
     this.widget = null;
     this.canvas = null;
     this.tabsContainer = null;
+    this.resizeObserver = null;
 
     this._createDOM();
     this._initDragging();
@@ -60,6 +58,17 @@ export class FloatingMount {
               <button class="abd-scope-tab-btn" data-mode="${m}">${m.toUpperCase()}</button>
             `).join('')}
           </div>
+          <div class="abd-scope-actions">
+            ${this.options.showFreeze ? '<button class="abd-scope-freeze-btn" id="scope-freeze-btn">FREEZE</button>' : ''}
+            ${this.options.showSnapshot !== false ? `
+              <button class="abd-scope-snapshot-btn" id="scope-snapshot-btn" title="Capture PNG Snapshot">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+                  <circle cx="12" cy="13" r="4"/>
+                </svg>
+              </button>
+            ` : ''}
+          </div>
         </div>
       </div>
       <div class="abd-scope-body">
@@ -79,16 +88,25 @@ export class FloatingMount {
     // Controls
     this.widget.querySelector('.abd-scope-close-btn').onclick = () => this.close();
 
-    if (this.tabsContainer) {
-      this.tabsContainer.addEventListener('click', (e) => {
-        const btn = e.target.closest('.abd-scope-tab-btn');
-        if (btn) {
-          const mode = btn.dataset.mode;
-          this.setActiveTab(mode);
-          this.onModeSelect(mode);
-        }
-      });
-    }
+    this.widget.querySelector('.abd-scope-header-bottom').addEventListener('click', (e) => {
+      const tabBtn = e.target.closest('.abd-scope-tab-btn');
+      if (tabBtn) {
+        const mode = tabBtn.dataset.mode;
+        this.setActiveTab(mode);
+        this.onModeSelect(mode);
+        return;
+      }
+      if (e.target.closest('#scope-freeze-btn')) {
+        const btn = e.target.closest('#scope-freeze-btn');
+        const isFrozen = btn.classList.toggle('active');
+        btn.textContent = isFrozen ? 'RESUME' : 'FREEZE';
+        this.onFreezeToggle(isFrozen);
+        return;
+      }
+      if (e.target.closest('#scope-snapshot-btn')) {
+        this.onSnapshot();
+      }
+    });
 
     if (this.options.defaultMode) {
       this.setActiveTab(this.options.defaultMode);
@@ -194,8 +212,5 @@ export class FloatingMount {
     }
     this.widget = null;
     this.canvas = null;
-    this.onModeSelect = null;
-    this.onResize = null;
-    this.onClose = null;
   }
 }
