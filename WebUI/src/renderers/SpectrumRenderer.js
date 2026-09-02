@@ -100,7 +100,7 @@ export class SpectrumRenderer extends BaseRenderer {
     ctx.fill();
 
     // 5. Stroke Spectrum Curve
-    ctx.strokeStyle = options.strokeColor || 'var(--scope-spectrum, #00e676)';
+    ctx.strokeStyle = this.resolveColor(options.strokeColor, '#00e676');
     ctx.lineWidth = 1.8;
     ctx.stroke();
 

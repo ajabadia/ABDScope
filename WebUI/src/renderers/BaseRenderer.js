@@ -135,6 +135,29 @@ export class BaseRenderer {
   }
 
   /**
+   * Resolves CSS custom properties (var(--...)) to computed canvas colors.
+   * @param {string} val - Color or var(--...) expression
+   * @param {string} fallback - Fallback color
+   * @returns {string} Canvas-ready color string
+   */
+  resolveColor(val, fallback = '#00c3ff') {
+    if (!val) return fallback;
+    if (typeof val === 'string' && val.startsWith('var(')) {
+      if (typeof window !== 'undefined' && this.canvas) {
+        const match = val.match(/var\(\s*([^,\)]+)(?:,\s*([^\)]+))?\)/);
+        if (match) {
+          const varName = match[1].trim();
+          const fallbackVal = match[2] ? match[2].trim() : fallback;
+          const computed = getComputedStyle(this.canvas).getPropertyValue(varName).trim();
+          return computed || fallbackVal;
+        }
+      }
+      return fallback;
+    }
+    return val;
+  }
+
+  /**
    * Abstract render method — implemented by mode renderers.
    * @param {Object} frame - ScopeDataFrame
    * @param {Object} [options] - Mode render options

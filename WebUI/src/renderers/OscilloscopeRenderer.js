@@ -73,8 +73,8 @@ export class OscilloscopeRenderer extends BaseRenderer {
     // 3. Render Channel R (if stereo audio)
     if (timeDataR && options.channel !== 'Left' && !isControl) {
       ctx.save();
-      ctx.lineWidth = 1.5;
-      ctx.strokeStyle = options.traceR || 'var(--scope-trace-r, #ff007f)';
+      ctx.lineWidth = 1.6;
+      ctx.strokeStyle = this.resolveColor(options.traceR, '#ff007f');
       ctx.beginPath();
 
       for (let i = 0; i < visibleSamples; ++i) {
@@ -94,8 +94,8 @@ export class OscilloscopeRenderer extends BaseRenderer {
       ctx.save();
       ctx.lineWidth = isControl ? 2.5 : 2.0;
       ctx.strokeStyle = isControl
-        ? (options.traceCv || '#ffaa00')
-        : (options.traceL || 'var(--scope-trace-l, #00c3ff)');
+        ? this.resolveColor(options.traceCv, '#ffaa00')
+        : this.resolveColor(options.traceL, '#00c3ff');
       ctx.beginPath();
 
       for (let i = 0; i < visibleSamples; ++i) {
@@ -108,12 +108,10 @@ export class OscilloscopeRenderer extends BaseRenderer {
       }
       ctx.stroke();
 
-      // Subtle glow effect when phosphor active
-      if (persist > 0.3) {
-        ctx.shadowBlur = 6;
-        ctx.shadowColor = ctx.strokeStyle;
-        ctx.stroke();
-      }
+      // Subtle glow effect
+      ctx.shadowBlur = persist > 0.3 ? 6 : 3;
+      ctx.shadowColor = ctx.strokeStyle;
+      ctx.stroke();
 
       ctx.restore();
     }

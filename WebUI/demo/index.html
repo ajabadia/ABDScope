@@ -7,14 +7,31 @@
   <link rel="stylesheet" href="../src/scope.css">
   <link rel="stylesheet" href="demo.css">
 </head>
-<body>
+<body data-theme="ms2000">
 
   <header class="demo-header">
     <div class="demo-title">
       <span>ABDScope</span>
-      <span class="demo-badge">v0.1.0-alpha • Phase 3 Multi-Mode Suite</span>
+      <span class="demo-badge">Universal Visualizer Engine</span>
     </div>
     <div class="btn-group">
+      <!-- Theme Dropdown in Header -->
+      <div style="display: flex; align-items: center; gap: 6px; margin-right: 8px;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--scope-accent, #00c3ff);">
+          <circle cx="12" cy="12" r="10"/>
+          <path d="M12 2a7 7 0 0 0 0 14v6"/>
+          <circle cx="7.5" cy="10.5" r="1.5"/>
+          <circle cx="12" cy="7.5" r="1.5"/>
+          <circle cx="16.5" cy="10.5" r="1.5"/>
+        </svg>
+        <select id="theme-select" class="demo-btn" style="padding: 4px 8px; cursor: pointer;">
+          <option value="ms2000" selected>MS2000 (Cian)</option>
+          <option value="cz101">CZ-101 (Red)</option>
+          <option value="deepmind">DeepMind (Amber)</option>
+          <option value="audiolab">AudioLab (Green)</option>
+        </select>
+      </div>
+
       <button class="demo-btn active" id="btn-mount-embedded">Embedded</button>
       <button class="demo-btn" id="btn-mount-floating">Floating Modal</button>
       <button class="demo-btn" id="btn-snapshot">
@@ -62,15 +79,7 @@
       <div class="btn-group">
         <button class="demo-btn active" id="btn-src-webaudio">Web Audio API</button>
         <button class="demo-btn" id="btn-src-bridge">Simulated C++ Bridge</button>
-        <button class="demo-btn" id="btn-src-mic">Microphone</button>
-      </div>
-
-      <div class="panel-title" style="margin-top: 10px;">Theme Presets</div>
-      <div class="btn-group" id="theme-selector">
-        <button class="demo-btn active" data-theme="ms2000">MS2000 (Cian)</button>
-        <button class="demo-btn" data-theme="cz101">CZ-101 (Red)</button>
-        <button class="demo-btn" data-theme="deepmind">DeepMind (Amber)</button>
-        <button class="demo-btn" data-theme="audiolab">AudioLab (Green)</button>
+        <button class="demo-btn" id="btn-src-audioin">Audio In</button>
       </div>
     </aside>
 
@@ -89,18 +98,27 @@
 
     const sigGen = new TestSignalGenerator();
     let currentScope = null;
+    let currentMountMode = 'embedded';
     let bridgeSimInterval = null;
 
     function initScope(mountMode = 'embedded') {
       if (currentScope) currentScope.destroy();
+      currentMountMode = mountMode;
 
       currentScope = createScope({
         containerId: 'scope-container',
         mountMode,
+        title: 'ABDScope Telemetry',
         enabledModes: ['oscilloscope', 'spectrum', 'lissajous', 'phase', 'spectrogram'],
         defaultMode: 'oscilloscope',
         showFreeze: true,
-        showVuMeters: true
+        showVuMeters: true,
+        onClose: () => {
+          document.getElementById('btn-mount-floating').classList.remove('active');
+          document.getElementById('btn-mount-embedded').classList.add('active');
+          initScope('embedded');
+          if (sigGen.analyser) currentScope.connectAnalyser(sigGen.analyser);
+        }
       });
 
       currentScope.registerRenderer('oscilloscope', new OscilloscopeRenderer());
@@ -163,28 +181,36 @@
     };
 
     // Mount Mode Toggle
-    document.getElementById('btn-mount-embedded').onclick = () => {
-      document.getElementById('btn-mount-embedded').classList.add('active');
-      document.getElementById('btn-mount-floating').classList.remove('active');
-      initScope('embedded');
-      if (sigGen.analyser) currentScope.connectAnalyser(sigGen.analyser);
-    };
+    const btnEmbedded = document.getElementById('btn-mount-embedded');
+    const btnFloating = document.getElementById('btn-mount-floating');
 
-    document.getElementById('btn-mount-floating').onclick = () => {
-      document.getElementById('btn-mount-floating').classList.add('active');
-      document.getElementById('btn-mount-embedded').classList.remove('active');
-      initScope('floating');
-      if (sigGen.analyser) currentScope.connectAnalyser(sigGen.analyser);
-    };
-
-    // Theme Switcher
-    document.getElementById('theme-selector').onclick = (e) => {
-      const btn = e.target.closest('button');
-      if (btn) {
-        document.querySelectorAll('#theme-selector button').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        document.body.setAttribute('data-theme', btn.dataset.theme);
+    btnEmbedded.onclick = () => {
+      if (currentMountMode !== 'embedded') {
+        btnEmbedded.classList.add('active');
+        btnFloating.classList.remove('active');
+        initScope('embedded');
+        if (sigGen.analyser) currentScope.connectAnalyser(sigGen.analyser);
       }
+    };
+
+    btnFloating.onclick = () => {
+      if (currentMountMode === 'floating') {
+        // Toggle close
+        btnFloating.classList.remove('active');
+        btnEmbedded.classList.add('active');
+        initScope('embedded');
+      } else {
+        // Toggle open
+        btnFloating.classList.add('active');
+        btnEmbedded.classList.remove('active');
+        initScope('floating');
+      }
+      if (sigGen.analyser) currentScope.connectAnalyser(sigGen.analyser);
+    };
+
+    // Theme Switcher in Header
+    document.getElementById('theme-select').onchange = (e) => {
+      document.body.setAttribute('data-theme', e.target.value);
     };
 
     // Source Modes
@@ -204,7 +230,7 @@
       currentScope.connectAnalyser(analyser);
     };
 
-    document.getElementById('btn-src-mic').onclick = async () => {
+    document.getElementById('btn-src-audioin').onclick = async () => {
       if (bridgeSimInterval) clearInterval(bridgeSimInterval);
       await sigGen.init();
       await sigGen.startMic();

@@ -74,14 +74,28 @@ export function createScope(config = {}) {
     ? new VuMeterRenderer(mount.vuContainer)
     : null;
 
+  let smoothedFreq = 0;
+  let lastNoteUpdateTime = 0;
+
   // Frame processing and dispatch
   const handleFrame = (frame) => {
     if (isDestroyed || isFrozen || !frame) return;
 
-    if (mount.setNoteTag && frame.detectedNoteName) {
-      mount.setNoteTag(`${frame.detectedNoteName} (${frame.estimatedFrequencyHz}Hz)`);
-    } else if (mount.setNoteTag && !frame.detectedNoteName) {
-      mount.setNoteTag('');
+    if (mount.setNoteTag) {
+      const now = (typeof performance !== 'undefined') ? performance.now() : Date.now();
+      if (frame.detectedNoteName && frame.estimatedFrequencyHz > 0) {
+        if (smoothedFreq === 0) smoothedFreq = frame.estimatedFrequencyHz;
+        else smoothedFreq += (frame.estimatedFrequencyHz - smoothedFreq) * 0.25;
+
+        if (now - lastNoteUpdateTime > 100) {
+          lastNoteUpdateTime = now;
+          mount.setNoteTag(`${frame.detectedNoteName} (${Math.round(smoothedFreq)} Hz)`);
+        }
+      } else if (!frame.detectedNoteName && now - lastNoteUpdateTime > 200) {
+        smoothedFreq = 0;
+        lastNoteUpdateTime = now;
+        mount.setNoteTag('');
+      }
     }
 
     const renderer = renderers.get(currentMode);

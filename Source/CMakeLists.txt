@@ -1,10 +1,88 @@
-# Source/CMakeLists.txt
-target_sources(ABDScopeCore INTERFACE
-    ${CMAKE_CURRENT_SOURCE_DIR}/Core/ScopeTapType.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/Core/SpscRingBuffer.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/Core/ScopeTap.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/Core/ScopeDataCollector.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/Core/TriggerDetector.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/Core/ScopeFrameSerializer.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/JUCE/JuceScopeComponent.h
+cmake_minimum_required(VERSION 3.20)
+
+project(ABDScopeCore LANGUAGES CXX)
+
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
+if(MSVC)
+  target_compile_options(ABDScopeCore PRIVATE /W4 /permissive- /Zc:__cplusplus /Zc:inline)
+else()
+  target_compile_options(ABDScopeCore PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
+endif()
+
+add_library(ABDScopeCore INTERFACE)
+
+target_include_directories(ABDScopeCore INTERFACE
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/Core>
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/JUCE>
 )
+
+target_sources(ABDScopeCore INTERFACE
+  ${CMAKE_CURRENT_SOURCE_DIR}/Core/ScopeTapType.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/Core/SpscRingBuffer.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/Core/ScopeTap.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/Core/ScopeDataCollector.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/Core/TriggerDetector.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/Core/ScopeFrameSerializer.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/JUCE/JuceScopeComponent.h
+)
+
+target_compile_definitions(ABDScopeCore INTERFACE
+  ABD_SCOPE_EXPORTS
+)
+
+if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+  target_compile_options(ABDScopeCore INTERFACE /MD)
+else()
+  target_compile_options(ABDScopeCore INTERFACE -fPIC)
+endif()
+
+set(ABD_SCOPE_VERSION "0.1.0-alpha")
+configure_file(
+  ${CMAKE_CURRENT_SOURCE_DIR}/Core/ABDScopeConfig.h.in
+  ${CMAKE_CURRENT_BINARY_DIR}/ABDScopeConfig.h
+  @ONLY
+)
+
+target_include_directories(ABDScopeCore INTERFACE
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>
+)
+
+include(CMakePackageConfigHelpers)
+
+write_basic_package_version_file(
+  ${CMAKE_CURRENT_BINARY_DIR}/ABDScopeConfigVersion.cmake
+  VERSION ${ABD_SCOPE_VERSION}
+  COMPATIBILITY SameMajorVersion
+)
+
+configure_package_config_file(
+  ${CMAKE_CURRENT_SOURCE_DIR}/ABDScopeConfig.cmake.in
+  ${CMAKE_CURRENT_BINARY_DIR}/ABDScopeConfig.cmake
+  INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/ABDScope
+  NO_SET_AND_CHECK_MACRO
+  NO_CHECK_REQUIRED_COMPONENTS_MACRO
+)
+
+install(FILES
+  ${CMAKE_CURRENT_BINARY_DIR}/ABDScopeConfig.cmake
+  ${CMAKE_CURRENT_BINARY_DIR}/ABDScopeConfigVersion.cmake
+  ${CMAKE_CURRENT_BINARY_DIR}/ABDScopeConfig.h
+  DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/ABDScope
+)
+
+install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/Core/
+  DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/abd/scope/Core
+  FILES_MATCHING PATTERN "*.h"
+)
+
+install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/JUCE/
+  DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/abd/scope/JUCE
+  FILES_MATCHING PATTERN "*.h"
+)
+
+enable_testing()
+
+add_subdirectory(tests)

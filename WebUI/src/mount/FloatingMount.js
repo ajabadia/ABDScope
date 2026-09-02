@@ -40,22 +40,29 @@ export class FloatingMount {
 
     this.widget.innerHTML = `
       <div class="abd-scope-header abd-scope-drag-handle">
-        <div class="abd-scope-title">
-          <span class="abd-scope-indicator"></span>
-          <span>${title}</span>
-          <span class="abd-scope-note-tag" id="scope-note-tag"></span>
+        <div class="abd-scope-header-top">
+          <div class="abd-scope-title">
+            <span class="abd-scope-indicator"></span>
+            <span class="abd-scope-title-text">${title}</span>
+            <span class="abd-scope-note-tag" id="scope-note-tag"></span>
+          </div>
+          <button class="abd-scope-close-btn" title="Close Scope" aria-label="Close">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+              <line x1="18" y1="6" x2="6" y2="18"/>
+              <line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
         </div>
-        <div class="abd-scope-controls">
+        <div class="abd-scope-header-bottom">
           <div class="abd-scope-tabs">
             ${enabledModes.map(m => `
               <button class="abd-scope-tab-btn" data-mode="${m}">${m.toUpperCase()}</button>
             `).join('')}
           </div>
-          <button class="abd-scope-close-btn" title="Close Scope">&times;</button>
         </div>
       </div>
       <div class="abd-scope-body">
-        <canvas class="abd-scope-canvas" width="400" height="150"></canvas>
+        <canvas class="abd-scope-canvas" width="450" height="180"></canvas>
       </div>
     `;
 
