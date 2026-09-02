@@ -238,3 +238,51 @@ Ensure your host HTML sets its corresponding theme attribute:
   <div id="chassis-scope" style="width: 320px; height: 140px;"></div>
 </body>
 ```
+
+---
+
+## 6. Pure C++ / Native JUCE Integration (e.g. `ABDAudioLab`)
+
+For standalone desktop applications or laboratory test benches that render strictly in native C++ using `juce::Graphics` (without WebView2 or HTML):
+
+### In `AudioLabComponent.h`:
+```cpp
+#pragma once
+#include <juce_gui_basics/juce_gui_basics.h>
+#include "ABDScope/Source/JUCE/JuceScopeComponent.h"
+
+class AudioLabComponent : public juce::Component
+{
+public:
+    AudioLabComponent(abd::scope::ScopeTap* tapToMonitor)
+        : scopeComponent(tapToMonitor, 44100.0f)
+    {
+        // 1. Configure visual appearance
+        scopeComponent.setMode(abd::scope::NativeScopeMode::Spectrum);
+        scopeComponent.setTraceColour(juce::Colour(0xff00e676)); // AudioLab Emerald
+        scopeComponent.setBackgroundColour(juce::Colour(0xff06120a));
+
+        // 2. Add as child component
+        addAndMakeVisible(scopeComponent);
+    }
+
+    void resized() override
+    {
+        scopeComponent.setBounds(getLocalBounds().reduced(8));
+    }
+
+    void switchToOscilloscope()
+    {
+        scopeComponent.setMode(abd::scope::NativeScopeMode::Oscilloscope);
+    }
+
+    void switchToLissajous()
+    {
+        scopeComponent.setMode(abd::scope::NativeScopeMode::Lissajous);
+    }
+
+private:
+    abd::scope::JuceScopeComponent scopeComponent;
+};
+```
+
