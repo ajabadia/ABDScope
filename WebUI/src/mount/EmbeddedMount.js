@@ -356,8 +356,18 @@ export class EmbeddedMount {
 
     this.lanes.forEach(lane => {
       let laneFrame = null;
-      if (dataFrame.taps && dataFrame.taps[lane.activeTap]) {
-        laneFrame = dataFrame.taps[lane.activeTap];
+      if (dataFrame.taps) {
+        if (dataFrame.taps[lane.activeTap]) {
+          laneFrame = dataFrame.taps[lane.activeTap];
+        } else {
+          // Fallback matching by sub-string slug
+          for (const key of Object.keys(dataFrame.taps)) {
+            if (key.includes(lane.activeTap) || lane.activeTap.includes(key)) {
+              laneFrame = dataFrame.taps[key];
+              break;
+            }
+          }
+        }
       } else if (dataFrame.tapId) {
         const tapMatches = (lane.activeTap === dataFrame.tapId) ||
                            (dataFrame.tapId.toLowerCase().includes(lane.activeTap.toLowerCase())) ||
@@ -365,7 +375,7 @@ export class EmbeddedMount {
         if (tapMatches) {
           laneFrame = dataFrame;
         }
-      } else if (!dataFrame.taps) {
+      } else {
         laneFrame = dataFrame;
       }
 

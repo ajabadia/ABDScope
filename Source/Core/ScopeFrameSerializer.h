@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include <string>
 #include <vector>
@@ -41,17 +41,44 @@ public:
 
     /**
      * Poll active tap and serialize frame into JSON wire protocol string.
-     * Returns empty string if no new frame is ready.
+     * Returns a valid baseline silence frame if no new audio is available, preventing UI blackouts.
      */
     std::string serializeActiveFrame(ScopeTap* activeTap, float sampleRate) {
         if (activeTap == nullptr || !activeTap->isActive()) return "";
 
         const size_t available = activeTap->getAvailableRead();
-        if (available < m_targetSamples) return "";
+        const bool isStereo = (activeTap->getType() == ScopeTapType::StereoAudio);
+
+        // Fallback baseline silence frame if buffer is starved, keeping visual reticle alive
+        if (available < m_targetSamples) {
+            std::ostringstream json;
+            json << std::fixed << std::setprecision(4);
+            json << "{"signalType":"" << toString(activeTap->getType()) << "","
+                 << ""tapId":"" << getTapSlug(activeTap) << "","
+                 << ""sampleRate":" << static_cast<int>(sampleRate) << ","
+                 << ""numSamples":" << m_targetSamples << ","
+                 << ""triggerIndex":0,"triggerFraction":0.0,"estimatedFrequencyHz":0.0,"detectedNoteName":"","
+                 << ""rmsL":0.0,"rmsR":0.0,"peakL":0.0,"peakR":0.0,"
+                 << ""timeDataL":[";
+            for (size_t i = 0; i < m_targetSamples; ++i) {
+                if (i > 0) json << ",";
+                json << "0.0";
+            }
+            json << "]";
+            if (isStereo) {
+                json << ","timeDataR":[";
+                for (size_t i = 0; i < m_targetSamples; ++i) {
+                    if (i > 0) json << ",";
+                    json << "0.0";
+                }
+                json << "]";
+            }
+            json << "}";
+            return json.str();
+        }
 
         // 1. Read available samples from ring buffer
         const size_t readCount = std::min(available, m_tempL.size());
-        const bool isStereo = (activeTap->getType() == ScopeTapType::StereoAudio);
         activeTap->read(m_tempL.data(), isStereo ? m_tempR.data() : nullptr, readCount);
 
         // 2. For audio signals, extract the latest consecutive block of m_targetSamples (1:1 audio rate)
@@ -90,16 +117,17 @@ public:
         // 4. Construct Wire Protocol JSON
         std::ostringstream json;
         json << std::fixed << std::setprecision(4);
-        json << "{\"signalType\":\"" << toString(activeTap->getType()) << "\","
-             << "\"tapId\":\"" << getTapSlug(activeTap) << "\","
-             << "\"sampleRate\":" << static_cast<int>(sampleRate) << ","
-             << "\"triggerIndex\":" << trigger.triggerIndex << ","
-             << "\"triggerFraction\":" << trigger.triggerFraction << ","
-             << "\"estimatedFrequencyHz\":" << trigger.estimatedFrequencyHz << ","
-             << "\"detectedNoteName\":\"" << trigger.noteName << "\","
-             << "\"rmsL\":" << rmsL << ",\"rmsR\":" << rmsR << ","
-             << "\"peakL\":" << peakL << ",\"peakR\":" << (isStereo ? peakR : peakL) << ","
-             << "\"timeDataL\":[";
+        json << "{"signalType":"" << toString(activeTap->getType()) << "","
+             << ""tapId":"" << getTapSlug(activeTap) << "","
+             << ""sampleRate":" << static_cast<int>(sampleRate) << ","
+             << ""numSamples":" << m_targetSamples << ","
+             << ""triggerIndex":" << trigger.triggerIndex << ","
+             << ""triggerFraction":" << trigger.triggerFraction << ","
+             << ""estimatedFrequencyHz":" << trigger.estimatedFrequencyHz << ","
+             << ""detectedNoteName":"" << trigger.noteName << "","
+             << ""rmsL":" << rmsL << ","rmsR":" << rmsR << ","
+             << ""peakL":" << peakL << ","peakR":" << (isStereo ? peakR : peakL) << ","
+             << ""timeDataL":[";
 
         for (size_t i = 0; i < m_targetSamples; ++i) {
             if (i > 0) json << ",";
@@ -108,7 +136,7 @@ public:
         json << "]";
 
         if (isStereo) {
-            json << ",\"timeDataR\":[";
+            json << ","timeDataR":[";
             for (size_t i = 0; i < m_targetSamples; ++i) {
                 if (i > 0) json << ",";
                 json << m_decimatedR[i];

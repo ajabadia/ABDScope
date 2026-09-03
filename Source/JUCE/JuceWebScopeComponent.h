@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #if defined(JUCE_VERSION) || __has_include(<juce_gui_extra/juce_gui_extra.h>)
 #include <juce_gui_extra/juce_gui_extra.h>
@@ -6,7 +6,6 @@
 #include "../Core/ScopeFrameSerializer.h"
 #include "ScopeResourceProvider.h"
 #include <atomic>
-#include <map>
 #include <vector>
 
 namespace abd::scope {
@@ -32,14 +31,11 @@ public:
                          .withNativeIntegrationEnabled(true)
                          .withResourceProvider(abd::scope::scopeResourceProvider)
                          .withEventListener("SET_ACTIVE_TAP", [this](const juce::var& message) {
-                             if (message.hasProperty("tapId"))
-                             {
-                                 auto tapId = message["tapId"].toString().toStdString();
-                                 int laneIdx = message.hasProperty("laneIdx") ? static_cast<int>(message["laneIdx"]) : 0;
-                                 handleLaneTapChange(laneIdx, tapId);
-                             }
+                             // Always ensure all registered taps remain active
+                             activateAllTaps();
                          }))
     {
+        activateAllTaps();
         addAndMakeVisible(webBrowser);
         reload();
 
@@ -76,86 +72,52 @@ public:
     [[nodiscard]] juce::WebBrowserComponent& getWebBrowser() noexcept { return webBrowser; }
 
 private:
-    void handleLaneTapChange(int laneIdx, const std::string& tapId)
+    void activateAllTaps() noexcept
     {
-        laneTaps[laneIdx] = tapId;
-
-        // Keep all taps active that are assigned to at least one lane
         for (size_t i = 0; i < scopeCollector.getTapCount(); ++i)
         {
             auto* tap = const_cast<ScopeTap*>(scopeCollector.getTap(i));
-            if (tap == nullptr) continue;
-            std::string slug = getTapSlug(tap);
-
-            bool needed = false;
-            for (const auto& [lane, assignedTap] : laneTaps)
-            {
-                if (assignedTap == slug || slug.find(assignedTap) != std::string::npos || assignedTap.find(slug) != std::string::npos)
-                {
-                    needed = true;
-                    break;
-                }
-            }
-            tap->setActive(needed);
+            if (tap != nullptr)
+                tap->setActive(true);
         }
     }
 
     void timerCallback() override
     {
         const size_t count = scopeCollector.getTapCount();
-        std::vector<ScopeTap*> activeTaps;
-        for (size_t i = 0; i < count; ++i)
-        {
-            auto* tap = const_cast<ScopeTap*>(scopeCollector.getTap(i));
-            if (tap != nullptr && tap->isActive())
-                activeTaps.push_back(tap);
-        }
-
-        if (activeTaps.empty())
-            return;
+        if (count == 0) return;
 
         const float sr = static_cast<float>(sampleRate.load(std::memory_order_relaxed));
 
-        if (activeTaps.size() == 1)
+        // Always bundle all registered taps so every lane receives its respective probe simultaneously
+        std::string bundle = "{"taps":{";
+        bool first = true;
+        for (size_t i = 0; i < count; ++i)
         {
-            std::string jsonPacket = frameSerializer.serializeActiveFrame(activeTaps[0], sr);
-            if (!jsonPacket.empty())
+            auto* tap = const_cast<ScopeTap*>(scopeCollector.getTap(i));
+            if (tap == nullptr || !tap->isActive()) continue;
+
+            std::string tapJson = frameSerializer.serializeActiveFrame(tap, sr);
+            if (!tapJson.empty())
             {
-                juce::String js = "if (window.__pushScopeFrame) { window.__pushScopeFrame("
-                                + juce::String(jsonPacket) + "); }";
-                webBrowser.evaluateJavascript(js);
+                if (!first) bundle += ",";
+                bundle += "\"" + getTapSlug(tap) + "\":" + tapJson;
+                first = false;
             }
         }
-        else
-        {
-            // Multi-tap bundle: { "taps": { "hardware_in": {...}, "diag_tone": {...} } }
-            std::string bundle = "{\"taps\":{";
-            bool first = true;
-            for (auto* tap : activeTaps)
-            {
-                std::string tapJson = frameSerializer.serializeActiveFrame(tap, sr);
-                if (!tapJson.empty())
-                {
-                    if (!first) bundle += ",";
-                    bundle += "\"" + getTapSlug(tap) + "\":" + tapJson;
-                    first = false;
-                }
-            }
-            bundle += "}}";
+        bundle += "}}";
 
-            if (!first)
-            {
-                juce::String js = "if (window.__pushScopeFrame) { window.__pushScopeFrame("
-                                + juce::String(bundle) + "); }";
-                webBrowser.evaluateJavascript(js);
-            }
+        if (!first)
+        {
+            juce::String js = "if (window.__pushScopeFrame) { window.__pushScopeFrame("
+                            + juce::String(bundle) + "); }";
+            webBrowser.evaluateJavascript(js);
         }
     }
 
     ScopeDataCollector& scopeCollector;
-    ScopeFrameSerializer frameSerializer { 1024 };
+    ScopeFrameSerializer frameSerializer { 512 };
     std::atomic<double> sampleRate { 44100.0 };
-    std::map<int, std::string> laneTaps;
 
     juce::WebBrowserComponent webBrowser;
 
