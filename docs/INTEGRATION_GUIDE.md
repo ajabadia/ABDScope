@@ -349,7 +349,7 @@ else()
     FetchContent_Declare(
         ABDScope
         GIT_REPOSITORY https://github.com/ajabadia/ABDScope.git
-        GIT_TAG        master
+        GIT_TAG        main
         GIT_SHALLOW    TRUE
     )
     FetchContent_MakeAvailable(ABDScope)
