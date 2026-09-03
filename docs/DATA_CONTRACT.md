@@ -1,6 +1,6 @@
-# ABDScope Data Contract & Wire Protocol
+﻿# ABDScope Data Contract & Wire Protocol
 
-> **Version:** 1.0.0  
+> **Version:** 1.1.0  
 > **Target:** C++ DSP Engine ↔ WebUI IPC Bridge / WASM
 
 ---
@@ -14,6 +14,9 @@ interface ScopeDataFrame {
   /** Signal domain type ('audio' for bipolar PCM, 'control' for unipolar/bipolar CV) */
   signalType: 'audio' | 'control';
 
+  /** Normalized slug identifier of the telemetry tap emitting this frame (e.g. 'hardware_in', 'diag_tone') */
+  tapId?: string;
+
   /** Left / Mono time domain PCM samples (-1.0 to +1.0) */
   timeDataL: Float32Array;
 
@@ -26,13 +29,16 @@ interface ScopeDataFrame {
   /** Audio sample rate in Hz (e.g. 44100, 48000, 96000) */
   sampleRate: number;
 
-  /** Sample index where positive zero-crossing occurred (0 if no trigger or control signal) */
+  /** Integer sample index where positive zero-crossing occurred (0 if no trigger or control signal) */
   triggerIndex: number;
+
+  /** Sub-sample fractional interpolation offset [0.0 to 1.0] for jitter-free analog oscilloscope locking */
+  triggerFraction?: number;
 
   /** Fundamental frequency detected in Hz (0 if undetected or control signal) */
   estimatedFrequencyHz: number;
 
-  /** Nearest musical note name (e.g. 'A4', 'C#3') */
+  /** Nearest musical note name (e.g. 'A4', 'C#3', 'B5') */
   detectedNoteName: string;
 
   /** Logarithmic or linear FFT magnitudes in dB (-96.0 to 0.0 dB). Null if not computed. */
@@ -58,29 +64,64 @@ interface ScopeDataFrame {
 
 ## 2. C++ JUCE IPC Wire Protocol (JSON over Bridge)
 
-In VST3/AU plugins using JUCE WebView2, the C++ message thread serializes frames at a fixed 30 Hz rate:
+### 2.1 Single Tap Frame
+When a single tap is active, the C++ message thread serializes frames at a fixed 30 Hz rate:
 
 ```json
 {
-  "type": "scopeFrame",
   "signalType": "audio",
-  "timeDataL": [0.0, 0.12, 0.23, 0.31, ...],
-  "timeDataR": [0.0, 0.11, 0.22, 0.30, ...],
-  "numSamples": 512,
-  "sampleRate": 44100,
-  "rmsL": 0.34,
-  "rmsR": 0.31,
-  "peakL": 0.78,
-  "peakR": 0.72,
-  "phaseCorrelation": 0.92
+  "tapId": "hardware_in",
+  "sampleRate": 48000,
+  "triggerIndex": 48,
+  "triggerFraction": 0.2415,
+  "estimatedFrequencyHz": 1000.0,
+  "detectedNoteName": "B5",
+  "rmsL": 0.3535,
+  "rmsR": 0.3535,
+  "peakL": 0.5000,
+  "peakR": 0.5000,
+  "timeDataL": [0.0, 0.0654, 0.1305, ...],
+  "timeDataR": [0.3535, 0.3980, ...],
+  "numSamples": 1024
+}
+```
+
+### 2.2 Multi-Tap Bundle Protocol
+When multiple visualization lanes in `ABDScope` monitor distinct taps simultaneously, `JuceWebScopeComponent` sends a bundled packet containing frames for all active taps in parallel:
+
+```json
+{
+  "taps": {
+    "hardware_in": {
+      "signalType": "audio",
+      "tapId": "hardware_in",
+      "sampleRate": 48000,
+      "triggerIndex": 0,
+      "timeDataL": [...],
+      "timeDataR": [...]
+    },
+    "diag_tone": {
+      "signalType": "audio",
+      "tapId": "diag_tone",
+      "sampleRate": 48000,
+      "triggerIndex": 48,
+      "triggerFraction": 0.182,
+      "estimatedFrequencyHz": 1000.0,
+      "detectedNoteName": "B5",
+      "timeDataL": [...],
+      "timeDataR": [...]
+    }
+  }
 }
 ```
 
 ### Consumption in WebUI:
+`EmbeddedMount` automatically routes each sub-frame to its respective lane according to `lane.activeTap`:
 ```javascript
-bridge.on('scopeFrame', (data) => {
-  scope.pushFrame(data);
-});
+window.__pushScopeFrame = function(frameJson) {
+  const frameData = typeof frameJson === 'string' ? JSON.parse(frameJson) : frameJson;
+  scope.pushFrame(frameData);
+};
 ```
 
 ---

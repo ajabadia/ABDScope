@@ -1,9 +1,27 @@
-# Changelog
+﻿# Changelog
 
 All notable changes to the **ABDScope** project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+---
+
+## [0.3.0] - 2026-09-03
+
+### Added
+- **Multi-Tap Lane Isolation & Concurrency**:
+  - `JuceWebScopeComponent` tracks per-lane tap subscriptions (`laneTaps`) via `{ type: 'SET_ACTIVE_TAP', tapId, laneIdx }`.
+  - Concurrently serializes all active taps into a multi-tap JSON bundle (`{ "taps": { "tapId": {...} } }`), enabling independent lanes to run live simultaneously without cross-talk or stalling.
+  - `EmbeddedMount` routes bundled frames to matching lanes according to `lane.activeTap === frame.tapId`.
+- **Sub-Sample Phase Lock (`triggerFraction`)**:
+  - `ScopeFrameSerializer` now extracts and serializes `triggerFraction` alongside `triggerIndex`.
+  - `OscilloscopeRenderer` performs sub-sample interpolation for analog-grade jitter-free oscilloscope traces.
+
+### Changed
+- **Contiguous 1:1 Audio Frame Extraction**:
+  - Removed variable fractional decimation (`step = readCount / targetSamples`) for audio signals in `ScopeFrameSerializer.h`.
+  - Frames now take the most recent contiguous block of `targetSamples` at true audio rate (48 kHz), eliminating artificial waveform stretch, frequency warping (e.g. 1000 Hz appearing as 1406 Hz), and trigger hunting.
 
 ---
 
@@ -38,8 +56,3 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - **Repository Setup**: Initial directory tree, `.gitignore`, `package.json`, `vitest.config.js`.
-- **Architectural Specification**: Complete 3-tier decoupled pipeline specification in `ARCHITECTURE_SPEC.md`.
-- **C++ Lock-Free DSP Core**: `SpscRingBuffer.h`, `ScopeTap.h`, `ScopeDataCollector.h`, `TriggerDetector.h`, `ScopeFrameSerializer.h`.
-- **WebUI Renderers**: `OscilloscopeRenderer`, `SpectrumRenderer`, `LissajousRenderer`, `PhaseMeterRenderer`, `SpectrogramRenderer`, `VuMeterRenderer`.
-- **Dual-Input Engine**: `AnalyserInput` (Web Audio API) and `PushInput` (C++ Bridge JSON packets).
-- **Mount Modes**: `EmbeddedMount` (inline chassis panel) and `FloatingMount` (draggable desktop modal).

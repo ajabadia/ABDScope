@@ -34,7 +34,47 @@ target_link_libraries(ABDMS2000 PRIVATE
 
 ---
 
-## 3. C++ Audio Engine Tap Setup (`processBlock`)
+## 3. Native JUCE Integration (`JuceWebScopeComponent`)
+
+ABDScope provides a zero-boilerplate, plug-and-play component ready for immediate integration into any JUCE plugin GUI, desktop tool, or floating modal window:
+
+```cpp
+#include <JUCE/JuceWebScopeComponent.h>
+
+class MyPluginEditor : public juce::AudioProcessorEditor
+{
+public:
+    MyPluginEditor(MySynthAudioProcessor& p) : AudioProcessorEditor(p), processor(p)
+    {
+        // One-liner instantiation: handles WebView2, embedded resources, IPC, and 30 FPS multi-tap pump
+        scopeView = std::make_unique<abd::scope::JuceWebScopeComponent>(
+            processor.scopeCollector,
+            processor.getSampleRate(),
+            30 // Refresh rate Hz
+        );
+        addAndMakeVisible(*scopeView);
+        setSize(1000, 650);
+    }
+
+    void resized() override
+    {
+        scopeView->setBounds(getLocalBounds());
+    }
+
+private:
+    MySynthAudioProcessor& processor;
+    std::unique_ptr<abd::scope::JuceWebScopeComponent> scopeView;
+};
+```
+
+### Key Capabilities of `JuceWebScopeComponent`:
+1. **Multi-Tap Concurrency**: Dynamically tracks tap assignments across all active lanes (`laneIdx`), keeping only necessary taps active in the audio thread.
+2. **Multi-Tap Frame Bundling**: Automatically serializes active probes into `{ "taps": { [tapId]: frame } }` when multiple lanes observe distinct signals simultaneously.
+3. **Embedded Binary Resource Provider**: Zero external web server or node process required; assets are served natively from memory using JUCE binary data.
+
+---
+
+## 3.1 C++ Audio Engine Tap Setup (`processBlock`)
 
 ### In `PluginProcessor.h`:
 ```cpp
