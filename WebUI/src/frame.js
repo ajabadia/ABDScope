@@ -102,6 +102,13 @@ export function calculatePhaseCorrelation(bufferL, bufferR, length = null) {
  * @returns {Object} Normalized ScopeDataFrame
  */
 export function createDataFrame(raw = {}, options = {}) {
+  if (raw && raw.taps && typeof raw.taps === 'object') {
+    const normalizedTaps = {};
+    for (const [key, tapPacket] of Object.entries(raw.taps)) {
+      normalizedTaps[key] = createDataFrame(tapPacket, options);
+    }
+    return { taps: normalizedTaps };
+  }
   const safeRaw = raw || {};
   const safeOpts = options || {};
   const signalType = safeRaw.signalType ?? (safeOpts.signalType === 'control' ? 'control' : 'audio');
