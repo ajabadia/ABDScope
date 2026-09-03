@@ -41,41 +41,15 @@ public:
 
     /**
      * Poll active tap and serialize frame into JSON wire protocol string.
-     * Returns a valid baseline silence frame if no new audio is available, preventing UI blackouts.
+     * Returns empty string if buffer has not accumulated targetSamples yet.
      */
     std::string serializeActiveFrame(ScopeTap* activeTap, float sampleRate) {
         if (activeTap == nullptr || !activeTap->isActive()) return "";
 
         const size_t available = activeTap->getAvailableRead();
-        const bool isStereo = (activeTap->getType() == ScopeTapType::StereoAudio);
+        if (available < m_targetSamples) return "";
 
-        // Fallback baseline silence frame if buffer is starved, keeping visual reticle alive
-        if (available < m_targetSamples) {
-            std::ostringstream json;
-            json << std::fixed << std::setprecision(4);
-            json << "{\"signalType\":\"" << toString(activeTap->getType()) << "\","
-                 << "\"tapId\":\"" << getTapSlug(activeTap) << "\","
-                 << "\"sampleRate\":" << static_cast<int>(sampleRate) << ","
-                 << "\"numSamples\":" << m_targetSamples << ","
-                 << "\"triggerIndex\":0,\"triggerFraction\":0.0,\"estimatedFrequencyHz\":0.0,\"detectedNoteName\":\"\","
-                 << "\"rmsL\":0.0,\"rmsR\":0.0,\"peakL\":0.0,\"peakR\":0.0,"
-                 << "\"timeDataL\":[";
-            for (size_t i = 0; i < m_targetSamples; ++i) {
-                if (i > 0) json << ",";
-                json << "0.0";
-            }
-            json << "]";
-            if (isStereo) {
-                json << ",\"timeDataR\":[";
-                for (size_t i = 0; i < m_targetSamples; ++i) {
-                    if (i > 0) json << ",";
-                    json << "0.0";
-                }
-                json << "]";
-            }
-            json << "}";
-            return json.str();
-        }
+        const bool isStereo = (activeTap->getType() == ScopeTapType::StereoAudio);
 
         // 1. Read available samples from ring buffer
         const size_t readCount = std::min(available, m_tempL.size());
