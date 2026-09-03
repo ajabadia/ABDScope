@@ -90,7 +90,7 @@ private:
         const float sr = static_cast<float>(sampleRate.load(std::memory_order_relaxed));
 
         // Always bundle all registered taps so every lane receives its respective probe simultaneously
-        std::string bundle = "{"taps":{";
+        std::string bundle = "{\"taps\":{";
         bool first = true;
         for (size_t i = 0; i < count; ++i)
         {

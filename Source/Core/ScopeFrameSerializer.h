@@ -53,20 +53,20 @@ public:
         if (available < m_targetSamples) {
             std::ostringstream json;
             json << std::fixed << std::setprecision(4);
-            json << "{"signalType":"" << toString(activeTap->getType()) << "","
-                 << ""tapId":"" << getTapSlug(activeTap) << "","
-                 << ""sampleRate":" << static_cast<int>(sampleRate) << ","
-                 << ""numSamples":" << m_targetSamples << ","
-                 << ""triggerIndex":0,"triggerFraction":0.0,"estimatedFrequencyHz":0.0,"detectedNoteName":"","
-                 << ""rmsL":0.0,"rmsR":0.0,"peakL":0.0,"peakR":0.0,"
-                 << ""timeDataL":[";
+            json << "{\"signalType\":\"" << toString(activeTap->getType()) << "\","
+                 << "\"tapId\":\"" << getTapSlug(activeTap) << "\","
+                 << "\"sampleRate\":" << static_cast<int>(sampleRate) << ","
+                 << "\"numSamples\":" << m_targetSamples << ","
+                 << "\"triggerIndex\":0,\"triggerFraction\":0.0,\"estimatedFrequencyHz\":0.0,\"detectedNoteName\":\"\","
+                 << "\"rmsL\":0.0,\"rmsR\":0.0,\"peakL\":0.0,\"peakR\":0.0,"
+                 << "\"timeDataL\":[";
             for (size_t i = 0; i < m_targetSamples; ++i) {
                 if (i > 0) json << ",";
                 json << "0.0";
             }
             json << "]";
             if (isStereo) {
-                json << ","timeDataR":[";
+                json << ",\"timeDataR\":[";
                 for (size_t i = 0; i < m_targetSamples; ++i) {
                     if (i > 0) json << ",";
                     json << "0.0";
@@ -117,17 +117,17 @@ public:
         // 4. Construct Wire Protocol JSON
         std::ostringstream json;
         json << std::fixed << std::setprecision(4);
-        json << "{"signalType":"" << toString(activeTap->getType()) << "","
-             << ""tapId":"" << getTapSlug(activeTap) << "","
-             << ""sampleRate":" << static_cast<int>(sampleRate) << ","
-             << ""numSamples":" << m_targetSamples << ","
-             << ""triggerIndex":" << trigger.triggerIndex << ","
-             << ""triggerFraction":" << trigger.triggerFraction << ","
-             << ""estimatedFrequencyHz":" << trigger.estimatedFrequencyHz << ","
-             << ""detectedNoteName":"" << trigger.noteName << "","
-             << ""rmsL":" << rmsL << ","rmsR":" << rmsR << ","
-             << ""peakL":" << peakL << ","peakR":" << (isStereo ? peakR : peakL) << ","
-             << ""timeDataL":[";
+        json << "{\"signalType\":\"" << toString(activeTap->getType()) << "\","
+             << "\"tapId\":\"" << getTapSlug(activeTap) << "\","
+             << "\"sampleRate\":" << static_cast<int>(sampleRate) << ","
+             << "\"numSamples\":" << m_targetSamples << ","
+             << "\"triggerIndex\":" << trigger.triggerIndex << ","
+             << "\"triggerFraction\":" << trigger.triggerFraction << ","
+             << "\"estimatedFrequencyHz\":" << trigger.estimatedFrequencyHz << ","
+             << "\"detectedNoteName\":\"" << trigger.noteName << "\","
+             << "\"rmsL\":" << rmsL << ",\"rmsR\":" << rmsR << ","
+             << "\"peakL\":" << peakL << ",\"peakR\":" << (isStereo ? peakR : peakL) << ","
+             << "\"timeDataL\":[";
 
         for (size_t i = 0; i < m_targetSamples; ++i) {
             if (i > 0) json << ",";
@@ -136,7 +136,7 @@ public:
         json << "]";
 
         if (isStereo) {
-            json << ","timeDataR":[";
+            json << ",\"timeDataR\":[";
             for (size_t i = 0; i < m_targetSamples; ++i) {
                 if (i > 0) json << ",";
                 json << m_decimatedR[i];
