@@ -95,6 +95,25 @@ describe('Trigger Engine: estimateFundamentalFrequency', () => {
     expect(sqFreq).toBeCloseTo(300, -0.5);
   });
 
+  it('should accurately track sub-bass frequencies (< 140 Hz down to 30 Hz)', () => {
+    // 55 Hz = A1 bass note
+    const bufferA1 = generateSineWave(55.0, 44100, 4096);
+    const freqA1 = estimateFundamentalFrequency(bufferA1, 44100);
+    expect(freqA1).toBeCloseTo(55.0, 0);
+    expect(frequencyToNoteName(freqA1)).toBe('A1');
+
+    // 65.4 Hz = C2 bass note
+    const bufferC2 = generateSawWave(65.4, 44100, 4096);
+    const freqC2 = estimateFundamentalFrequency(bufferC2, 44100);
+    expect(freqC2).toBeCloseTo(65.4, 0);
+    expect(frequencyToNoteName(freqC2)).toBe('C2');
+
+    // 30.0 Hz sub-bass
+    const buffer30 = generateSineWave(30.0, 44100, 4096);
+    const freq30 = estimateFundamentalFrequency(buffer30, 44100);
+    expect(freq30).toBeCloseTo(30.0, 0);
+  });
+
   it('should return 0 for DC offset or silence', () => {
     const dcBuffer = new Float32Array(1024).fill(0.5);
     expect(estimateFundamentalFrequency(dcBuffer, 44100)).toBe(0);

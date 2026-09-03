@@ -1,28 +1,42 @@
 # ABDScope
 
-> **Universal, lock-free, zero-copy audio visualizer and analysis engine** for the ABDSynths plugin ecosystem and scientific diagnostic tools.
+> **Universal, lock-free, zero-copy audio visualizer and telemetry engine** for the ABDSynths plugin ecosystem and scientific diagnostic tools.
 
-[![Architecture](https://img.shields.io/badge/Architecture-3--Tier%20Pipeline-blue.svg)](ARCHITECTURE_SPEC.md)
-[![Status](https://img.shields.io/badge/Status-Phase%201%20In%20Progress-yellow.svg)](ROADMAP.md)
+[![Architecture](https://img.shields.io/badge/Architecture-3--Tier%20Modular%20Pipeline-blue.svg)](ARCHITECTURE_SPEC.md)
+[![Tests](https://img.shields.io/badge/Tests-56%20Passing%20(100%25)-brightgreen.svg)](WebUI/tests)
+[![C++](https://img.shields.io/badge/C%2B%2B-20%20Lock--Free%20SPSC-purple.svg)](Source/Core)
 [![License](https://img.shields.io/badge/License-Proprietary-red.svg)](#)
 
 ---
 
-## 🚀 Features
+## 🚀 Key Capabilities
 
+- **Responsive 2-Column Multi-Lane Grid & Intelligent Lane Packing**:
+  - Configurable stacked lanes (`maxLanes: 1..N`) with dynamic layout switcher buttons (`[ 1 ]`, `[ 2 ]`, `[ 3 ]`, `[ 4 ]`).
+  - **Auto-expansion for solitary lanes**: Compact modes (Lissajous, Phase) automatically pair 50%/50% side-by-side or expand to full 100% width when solitary, leaving zero empty space.
+  - **Intelligent non-duplicated mode and tap selection**: Adding a new lane automatically assigns the first unused visualization mode and signal probe, with full state preservation of existing lanes.
+  - **Manual column span toggle**: `[ ½ ]` (50% half-width) vs `[ 1 ]` (100% full-width) per lane.
+  - **Per-lane Freeze & Snapshot**: Freeze any lane for live A/B reference comparisons against active audio signals, and export instant PNG snapshots.
+  - **Independent per-lane probe selector**: Any lane can tap into any host telemetry point (`availableTaps`: Master, Osc 1, Filter, LFO, etc.).
+  - Automatic vertical scrolling with minimum lane height guarantees (`130px`).
+- **Studio-Grade Analysis & Sub-Bass Pitch Lock**:
+  - Peak-scaled adaptive hysteresis and 4096-sample analysis window for jitter-free trigger stabilization on deep sub-bass (< 140 Hz down to 20 Hz).
+  - Octave-adaptive cycle fitting (`1`, `2`, `4`, `8` cycles) with fundamental pitch detection and live note/Hz badges per lane.
+  - Logarithmic FFT spectrum analyzer (20 Hz - 20 kHz) with decay ballistics and peak hold.
+  - Stereophonic Lissajous Vectorscope ($M/S$ rotated $45^\circ$) with analog persistence simulation.
+  - Stereo Phase Correlation meter with companion dual VU ballistics.
+  - Real-time continuous Spectrogram Waterfall with plasma/inferno color palettes.
 - **Dual-Input Engine**:
-  - **Direct Web Audio**: Auto-pumps `AnalyserNode` for standalone web/WASM environments.
-  - **Bridge / Push**: Real-time streaming from C++ JUCE engines via 30 Hz IPC wire protocol.
-- **Lock-Free Multi-Tap On-Demand**: Zero audio-thread overhead for inactive measuring points (`isTapActive` atomic flag).
-- **Studio-Grade Analysis Algorithms**:
-  - Zero-crossing triggering with configurable hysteresis for jitter-free waveform stabilization.
-  - Logarithmic FFT spectrum analyzer (20 Hz - 20 kHz) with ballistics and peak-hold.
-  - Stereo Lissajous / Goniometer ($M/S$ rotated $45^\circ$) with analog phosphor persistence.
-  - Stereo Phase correlation meter & companion VU meters.
-  - Pitch & fundamental frequency detector with MIDI note label display.
-- **Embeddable & Floating**: Seamlessly mounts as an inline panel or a draggable floating modal widget.
-- **High-DPI / Retina Ready**: Crisp, sub-millisecond drawing using `ResizeObserver` and `devicePixelRatio` scaling.
-- **Zero-Copy & DRY**: Integrates across instruments using NTFS Directory Junctions and CMake subdirectories without duplicating code.
+  - **Direct Web Audio API**: Pumps `AnalyserNode` streams for standalone web / WASM environments.
+  - **Bridge / Push**: Decoupled JSON streaming from C++ JUCE engines via 30 Hz atomic IPC wire protocol.
+- **Zero Audio-Thread Overhead**:
+  - Lock-free C++20 SPSC ring buffers (`SpscRingBuffer.h`) with atomic on-demand measuring (`isTapActive`). Inactive measuring points consume 0 CPU cycles and 0 memory copies.
+- **Flexible Mount Modes**:
+  - **Embedded Panel**: Mounts seamlessly inside any host synthesizer DOM container with auto `ResizeObserver`.
+  - **Floating Modal**: Draggable, resizable desktop overlay window with smooth backdrop blur.
+- **Multi-Platform Native & Web**:
+  - Pure ES Module WebUI.
+  - Native JUCE 2D Component for C++ Standalone tools (`ABDScope Native GUI Demo.exe`).
 
 ---
 
@@ -32,46 +46,71 @@
 ABDScope/
 ├── Source/                       # C++ Engine & JUCE wrappers
 │   ├── Core/                     # Pure C++20 lock-free SPSC multi-tap collectors & DSP
-│   └── JUCE/                     # Native JUCE components for ABDAudioLab
+│   ├── JUCE/                     # Native JUCE graphics components
+│   ├── StandaloneDemo/           # Native Standalone GUI Application Demo
+│   └── tests/                    # C++ Standalone Sanity Smoke Test
 ├── WebUI/                        # Modern WebUI Frontend (ES Modules)
 │   ├── src/                      # Core JS engine, inputs, mounts, and renderers
+│   │   ├── mount/                # EmbeddedMount, FloatingMount, LaneController
+│   │   ├── renderers/            # Oscilloscope, Spectrum, Lissajous, Phase, Spectrogram, VU
+│   │   ├── input/                # AnalyserInput (WebAudio) & PushInput (Bridge)
+│   │   └── trigger.js            # Sub-sample pitch lock & adaptive hysteresis
 │   ├── demo/                     # Standalone interactive test harness & signal generator
-│   └── tests/                    # Vitest unit test suite
-├── docs/                         # Integration guides and wire protocol specs
-├── ARCHITECTURE_SPEC.md          # Technical architectural specification
-├── ROADMAP.md                    # Milestone roadmap & DoD tracking
-├── HANDOFF.md                    # Continuous context handoff document
-└── CHANGELOG.md                  # Semantic release history
+│   └── tests/                    # Vitest unit test suite (56 tests)
+├── docs/                         # Integration guides, data contracts, and usage manuals
+├── ARCHITECTURE_SPEC.md          # Complete technical architectural specification
+├── ROADMAP.md                    # Roadmap milestone tracking
+└── build.bat                     # Unified C++ CMake & WebUI test automation script
 ```
 
 ---
 
-## 📦 Quick Start (WebUI)
+## ⚡ Quick Start
+
+### 1. Build and Run All Tests (C++ MSVC & Vitest)
+```cmd
+build.bat
+```
+
+### 2. Standalone Web Demo
+```cmd
+cd WebUI
+npm run demo
+```
+Open `http://localhost:8080/demo/index.html` in any browser.
+
+---
+
+## 📖 Integration Example (Host Synthesizer)
 
 ```javascript
-import { createScope } from './components/scope/scope.js';
+import { createScope } from './scope/scope.js';
 
-// Embedded scope with oscilloscope and FFT spectrum
 const scope = createScope({
   containerId: 'scope-container',
   mountMode: 'embedded',
-  enabledModes: ['oscilloscope', 'spectrum'],
-  defaultMode: 'oscilloscope',
-  showVuMeters: true
+  maxLanes: 4,
+  layout: '2',
+  availableTaps: [
+    { id: 'master', name: 'Master Out' },
+    { id: 'osc1',   name: 'Oscillator 1' },
+    { id: 'filter', name: 'Ladder Filter' }
+  ],
+  onTapChange: (tapId, laneIdx) => {
+    bridge.setActiveScopeTap(tapId, laneIdx);
+  }
 });
 
-// Connect to Web Audio AnalyserNode (Standalone / Web mode):
-scope.connectAnalyser(myAnalyserNode);
-
-// Or push frames from C++ JUCE IPC Bridge (Plugin mode):
-bridge.on('scopeFrame', (frame) => scope.pushFrame(frame));
+// Receive streaming telemetry frames from C++ timer callback (30 FPS)
+window.addEventListener('message', (e) => {
+  if (e.data?.event === 'scopeFrame' && e.data?.payload) {
+    scope.pushFrame(e.data.payload);
+  }
+});
 ```
 
 ---
 
-## 🧪 Testing
+## 📜 License
 
-```bash
-npm install
-npm test
-```
+Proprietary © 2026 ABDSynths. All rights reserved.

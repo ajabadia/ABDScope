@@ -1,6 +1,6 @@
-# ABDScope Integration Guide (Zero-Copy)
+﻿# ABDScope Integration Guide (Zero-Copy)
 
-> **Objective:** Connect `ABDScope` into any synthesizer plugin (`ABDMS2000`, `ABDCZ101`, `ABDEep`, `ABDJUNiO601`, `ABDAudioLab`) in under 5 minutes with zero code duplication, zero-copy DSP taps, and live hot-reloading.
+> **Objective:** Connect `ABDScope` into any synthesizer plugin (`ABDMS2000`, `ABDCZ101`, `ABDEep`, `ABDJUNiO601`, `ABDAudioLab`) in under 5 minutes with zero code duplication, multi-lane support, zero-copy DSP taps, and live hot-reloading.
 
 ---
 
@@ -118,7 +118,7 @@ void MySynthAudioProcessor::handleWebUiMessage(const juce::var& message)
 }
 ```
 
-### In `processBlock()` (Audio Thread — < 1 ns overhead when probe inactive):
+### In `processBlock()` (Audio Thread â€” < 1 ns overhead when probe inactive):
 ```cpp
 void MySynthAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer&)
 {
@@ -144,36 +144,34 @@ void MySynthAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce:
 
 ## 4. WebUI Instantiation (JavaScript)
 
-### Pattern A: Embedded Scope in Chassis Panel
+### Pattern A: Embedded Scope with Multi-Lane Support
 ```javascript
 import { createScope } from './scope/scope.js';
-import { OscilloscopeRenderer } from './scope/renderers/OscilloscopeRenderer.js';
-import { SpectrumRenderer } from './scope/renderers/SpectrumRenderer.js';
 
 export function initPanelScope(containerId = 'chassis-scope') {
   const scope = createScope({
     containerId,
     mountMode: 'embedded',
     title: 'MS2000 TELEMETRY',
-    enabledModes: ['oscilloscope', 'spectrum'],
+    maxLanes: 2, // Allow switching between 1 and 2 lanes in chassis
+    layout: '1',
+    enabledModes: ['oscilloscope', 'spectrum', 'lissajous', 'phase', 'spectrogram'],
     defaultMode: 'oscilloscope',
     showFreeze: true,
     showSnapshot: true,
     showVuMeters: true,
     availableTaps: [
-      { id: 'master', name: 'Master Out', type: 'audio' },
-      { id: 'osc1', name: 'Osc 1 (DWGS)', type: 'audio' },
-      { id: 'filter', name: 'Filter Out', type: 'audio' },
-      { id: 'lfo1', name: 'LFO 1 (CV)', type: 'control' }
+      { id: 'master', name: 'Master Out' },
+      { id: 'osc1',   name: 'Osc 1 (DWGS)' },
+      { id: 'filter', name: 'Filter Out' },
+      { id: 'lfo1',   name: 'LFO 1 (CV)' }
     ],
     defaultTap: 'master',
-    onTapChange: (tapId) => {
-      window.chrome?.webview?.postMessage({ type: 'SET_ACTIVE_TAP', tapId });
+    onTapChange: (tapId, laneIdx) => {
+      // Send tap switch message to C++ audio engine
+      window.chrome?.webview?.postMessage({ type: 'SET_ACTIVE_TAP', tapId, laneIdx });
     }
   });
-
-  scope.registerRenderer('oscilloscope', new OscilloscopeRenderer());
-  scope.registerRenderer('spectrum', new SpectrumRenderer());
 
   // Listen for frames emitted from C++ timerCallback
   window.addEventListener('message', (e) => {
@@ -189,38 +187,29 @@ export function initPanelScope(containerId = 'chassis-scope') {
 ### Pattern B: Floating Modal Window
 ```javascript
 import { createScope } from './scope/scope.js';
-import { OscilloscopeRenderer } from './scope/renderers/OscilloscopeRenderer.js';
-import { SpectrumRenderer } from './scope/renderers/SpectrumRenderer.js';
-import { LissajousRenderer } from './scope/renderers/LissajousRenderer.js';
-import { PhaseMeterRenderer } from './scope/renderers/PhaseMeterRenderer.js';
-import { SpectrogramRenderer } from './scope/renderers/SpectrogramRenderer.js';
 
 export function createScopeModal() {
   const modalScope = createScope({
     mountMode: 'floating',
-    title: 'MS2000 OSCILLOSCOPE & SPECTRUM ANALYZER',
+    title: 'MS2000 TELEMETRY LAB',
+    maxLanes: 4, // Allow up to 4 simultaneous diagnostic lanes
+    layout: '2', // Start with Dual Split
     enabledModes: ['oscilloscope', 'spectrum', 'lissajous', 'phase', 'spectrogram'],
     defaultMode: 'oscilloscope',
     showFreeze: true,
     showSnapshot: true,
     showVuMeters: true,
     availableTaps: [
-      { id: 'master', name: 'Master Out', type: 'audio' },
-      { id: 'osc1', name: 'Osc 1 (DWGS)', type: 'audio' },
-      { id: 'filter', name: 'Filter Out', type: 'audio' },
-      { id: 'lfo1', name: 'LFO 1 (CV)', type: 'control' }
+      { id: 'master', name: 'Master Out' },
+      { id: 'osc1',   name: 'Osc 1 (DWGS)' },
+      { id: 'filter', name: 'Filter Out' },
+      { id: 'lfo1',   name: 'LFO 1 (CV)' }
     ],
     defaultTap: 'master',
-    onTapChange: (tapId) => {
-      window.chrome?.webview?.postMessage({ type: 'SET_ACTIVE_TAP', tapId });
+    onTapChange: (tapId, laneIdx) => {
+      window.chrome?.webview?.postMessage({ type: 'SET_ACTIVE_TAP', tapId, laneIdx });
     }
   });
-
-  modalScope.registerRenderer('oscilloscope', new OscilloscopeRenderer());
-  modalScope.registerRenderer('spectrum', new SpectrumRenderer());
-  modalScope.registerRenderer('lissajous', new LissajousRenderer());
-  modalScope.registerRenderer('phase', new PhaseMeterRenderer());
-  modalScope.registerRenderer('spectrogram', new SpectrogramRenderer());
 
   return modalScope;
 }
@@ -235,9 +224,11 @@ Ensure your host HTML sets its corresponding theme attribute:
 ```html
 <body data-theme="ms2000">
   <link rel="stylesheet" href="./scope/scope.css">
-  <div id="chassis-scope" style="width: 320px; height: 140px;"></div>
+  <div id="chassis-scope" style="width: 380px; height: 160px;"></div>
 </body>
 ```
+
+Supported themes: `ms2000`, `cz101`, `deepmind`, `audiolab`.
 
 ---
 
@@ -245,7 +236,6 @@ Ensure your host HTML sets its corresponding theme attribute:
 
 For standalone desktop applications or laboratory test benches that render strictly in native C++ using `juce::Graphics` (without WebView2 or HTML):
 
-### In `AudioLabComponent.h`:
 ```cpp
 #pragma once
 #include <juce_gui_basics/juce_gui_basics.h>
@@ -286,3 +276,171 @@ private:
 };
 ```
 
+---
+
+## 7. WebView2 Binary Assets & Embedded Scope Serving Guidelines
+
+When embedding `ABDScope` inside a plugin or application using WebView2 without spinning up an HTTP server, keep these architectural rules in mind:
+
+### 7.1. Embedded Telemetry (`WebUI/index.html`) vs. Browser Demo (`WebUI/demo/`)
+- **`WebUI/index.html` (Production Embedded Scope)**: Contains only the multi-lane canvas visualizer (`EmbeddedMount`), listening to C++ IPC via `window.__pushScopeFrame` and message events. It fills 100% of the viewport and does NOT include any signal generators or local Web Audio controls.
+- **`WebUI/demo/` (Browser Sandbox Only)**: A standalone browser testbed containing synthetic Web Audio API oscillators and GUI sliders. **NEVER bundle `WebUI/demo/*` into `juce_add_binary_data`**, otherwise duplicate `index.html` entries will collide in C++ binary data and overwrite the production embedded view.
+
+### 7.2. CMake Binary Assets Packaging Pattern
+In `CMakeLists.txt`, always exclude `/demo/`, `/tests/`, and `/node_modules/`:
+
+```cmake
+# Embedded WebUI Binary Assets for WebView2
+if(COMMAND juce_add_binary_data)
+  file(GLOB_RECURSE ABDSCOPE_WEB_ASSETS
+    "${CMAKE_CURRENT_SOURCE_DIR}/WebUI/src/*"
+  )
+  list(APPEND ABDSCOPE_WEB_ASSETS "${CMAKE_CURRENT_SOURCE_DIR}/WebUI/index.html")
+  list(FILTER ABDSCOPE_WEB_ASSETS EXCLUDE REGEX "/demo/")
+  list(FILTER ABDSCOPE_WEB_ASSETS EXCLUDE REGEX "/tests/")
+  list(FILTER ABDSCOPE_WEB_ASSETS EXCLUDE REGEX "/node_modules/")
+
+  juce_add_binary_data(ABDScopeWebAssets
+    HEADER_NAME "ABDScopeWebAssets.h"
+    NAMESPACE "ABDScopeWebAssets"
+    SOURCES ${ABDSCOPE_WEB_ASSETS}
+  )
+  target_link_libraries(ABDScopeCore INTERFACE ABDScopeWebAssets)
+  add_library(ABDScope::ABDScopeWebAssets ALIAS ABDScopeWebAssets)
+endif()
+```
+
+### 7.3. Basename Resolution in `ScopeResourceProvider`
+Because `juce_add_binary_data` strips subdirectory paths and stores only the base filename in `originalFilenames`, ES6 module requests (e.g. `/src/mount/LaneController.js` or `../renderers/OscilloscopeRenderer.js`) must be resolved by their base filename:
+
+```cpp
+// Extract bare filename (e.g. "/src/mount/LaneController.js" -> "LaneController.js")
+juce::String filename = decodedPath.fromLastOccurrenceOf("/", false, false);
+if (filename.isEmpty()) filename = decodedPath;
+
+// Match against originalFilenames table
+for (int i = 0; i < ABDScopeWebAssets::namedResourceListSize; ++i) {
+    if (filename.equalsIgnoreCase(ABDScopeWebAssets::originalFilenames[i])) {
+        binData = ABDScopeWebAssets::getNamedResource(ABDScopeWebAssets::namedResourceList[i], binSize);
+        break;
+    }
+}
+```
+Always return strict MIME types: `text/html` (`.html`), `text/css` (`.css`), `application/javascript` (`.js`/`.mjs`).
+
+---
+
+## 8. Remote GitHub Dependency Management via `FetchContent` (Zero-Config Monorepo & CI/CD)
+
+To allow consumer synthesizers to automatically pull and update `ABDScope` directly from GitHub while still allowing live local development, use CMake's **Local Override + `FetchContent`** pattern:
+
+```cmake
+# ------------------------------------------------------------------------------
+# ABDScope: Local Monorepo Fallback with Remote GitHub FetchContent
+# ------------------------------------------------------------------------------
+set(ABDSCOPE_LOCAL_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../ABDScope")
+
+if(EXISTS "${ABDSCOPE_LOCAL_DIR}/CMakeLists.txt")
+    message(STATUS "ABDScope: Using local workspace from ${ABDSCOPE_LOCAL_DIR}")
+    add_subdirectory("${ABDSCOPE_LOCAL_DIR}" "${CMAKE_BINARY_DIR}/ABDScope_Build" EXCLUDE_FROM_ALL)
+else()
+    include(FetchContent)
+    message(STATUS "ABDScope: Fetching from GitHub repository (master branch)...")
+    FetchContent_Declare(
+        ABDScope
+        GIT_REPOSITORY https://github.com/ajabadia/ABDScope.git
+        GIT_TAG        master
+        GIT_SHALLOW    TRUE
+    )
+    FetchContent_MakeAvailable(ABDScope)
+endif()
+
+# Link the core library to your audio target
+target_link_libraries(MySynthesizer PRIVATE ABDScope::ABDScopeCore)
+```
+
+### Benefits of this Pattern:
+1. **Local Developer Speed**: When working in your local monorepo (`D:\desarrollos\ABDSynths`), CMake detects the sibling folder and uses it instantly without network requests or git pushes.
+2. **Deterministic CI/CD & Team Collaboration**: When building on other machines or in GitHub Actions, CMake automatically clones the exact repository tag and compiles it cleanly.
+
+
+---
+
+## 9. Plug-and-Play C++ GUI Component (`JuceWebScopeComponent`)
+
+Starting in v0.1.0, `ABDScope` provides a ready-to-use, zero-boilerplate JUCE C++ Component: `abd::scope::JuceWebScopeComponent`.
+
+Instead of manually creating a `juce::WebBrowserComponent`, hooking up `withResourceProvider`, writing an IPC message listener, and managing a 30 FPS serialization timer pump, consumers can integrate the entire embedded WebUI telemetry suite in **3 lines of code**:
+
+### 9.1. Usage in Any Plugin Editor or Window
+```cpp
+#include <JUCE/JuceWebScopeComponent.h>
+
+class MyPluginAudioProcessorEditor : public juce::AudioProcessorEditor
+{
+public:
+    MyPluginAudioProcessorEditor(MyPluginAudioProcessor& p)
+        : AudioProcessorEditor(&p), processor(p)
+    {
+        // 1. Instantiate plug-and-play web scope component
+        webScope = std::make_unique<abd::scope::JuceWebScopeComponent>(
+            processor.getScopeCollector(),
+            processor.getSampleRate(),
+            30 // Refresh rate in Hz
+        );
+
+        // 2. Add as child component
+        addAndMakeVisible(*webScope);
+
+        setSize(800, 500);
+    }
+
+    void resized() override
+    {
+        webScope->setBounds(getLocalBounds());
+    }
+
+private:
+    MyPluginAudioProcessor& processor;
+    std::unique_ptr<abd::scope::JuceWebScopeComponent> webScope;
+};
+```
+
+### 9.2. CMake Requirement
+The target building `JuceWebScopeComponent` (your plugin or standalone app) must have WebView2 enabled in JUCE:
+```cmake
+juce_add_plugin(MyPlugin
+    ...
+    NEEDS_WEBVIEW2 TRUE
+)
+target_link_libraries(MyPlugin PRIVATE ABDScope::ABDScopeCore)
+```
+
+---
+
+## 10. Tap Routing Contracts & Wire Protocol Best Practices
+
+### 10.1. Tap ID vs. Display Name Resolution
+- **WebUI Contract**: In `availableTaps`, each probe defines a machine slug `id` and a human-readable `name`:
+  ```javascript
+  availableTaps: [
+    { id: 'hardware_in', name: 'Hardware In (DUT)' },
+    { id: 'stimulus',    name: 'Stimulus Generator' },
+    { id: 'osc1',        name: 'Oscillator 1 (DWGS)' }
+  ]
+  ```
+  When the user changes taps, the frontend posts `{ type: 'SET_ACTIVE_TAP', tapId, laneIdx }`.
+- **C++ Resolution**: `JuceWebScopeComponent` and `ScopeDataCollector` support automatic alias and fuzzy matching. Whether the frontend sends `'hardware_in'` or `'Hardware In (DUT)'`, `selectTap()` resolves to the correct probe.
+
+### 10.2. JSON Wire Protocol & Typed Array Normalization
+- When C++ transmits frames over WebView2 IPC (`window.__pushScopeFrame`), the numeric sample buffers `timeDataL` and `timeDataR` arrive as native JavaScript `Array` instances from `JSON.parse`.
+- `createDataFrame()` in `WebUI/src/frame.js` automatically converts native JS `Array` objects into high-performance `Float32Array` instances:
+  ```javascript
+  const timeDataL = (raw.timeDataL instanceof Float32Array)
+    ? raw.timeDataL
+    : (Array.isArray(raw.timeDataL) ? new Float32Array(raw.timeDataL) : new Float32Array(0));
+  ```
+  *Never assume incoming bridge data is already a `Float32Array` when parsing JSON wire packets.*
+
+### 10.3. Recommended Diagnostic Reference Tap Pattern
+Every audio engine should register a dedicated diagnostic tap (e.g. `Diagnostic 1kHz`) that synthesizes a pure reference sine wave (-6 dBfs) whenever it is marked active. This allows operators and QA engineers to immediately verify visual rendering, FFT frequency spikes, Lissajous figures, and phase correlation without requiring physical audio hardware or active MIDI notes.

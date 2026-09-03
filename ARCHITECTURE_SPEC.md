@@ -321,52 +321,54 @@ Para que la forma de onda permanezca estática en pantalla sin jitter visual:
 ```javascript
 import { createScope } from './components/scope/scope.js';
 
-// ─── Caso 1: Panel embebido con múltiples modos ───
+// ─── Caso 1: Panel embebido con Multi-Lane Split View (Grid Responsive 2 Columnas) ───
 const scope = createScope({
   containerId: 'scope-view',
   mountMode: 'embedded',                // Panel integrado en la UI del sinte
-  enabledModes: ['oscilloscope', 'spectrum', 'lissajous', 'phase'],
+  maxLanes: 4,                          // Soporta de 1 a 4 carriles diagnósticos
+  layout: '2',                          // Comienza en modo Dual Split
+  enabledModes: ['oscilloscope', 'spectrum', 'lissajous', 'phase', 'spectrogram'],
   defaultMode: 'oscilloscope',
 
-  // VU Meters compañeros (se muestran al lado del scope activo)
+  // Sondas multi-tap expuestas por el sintetizador
+  availableTaps: [
+    { id: 'master', name: 'Master Out' },
+    { id: 'osc1',   name: 'Oscillator 1' },
+    { id: 'osc2',   name: 'Oscillator 2' },
+    { id: 'filter', name: 'Ladder Filter' }
+  ],
+  defaultTap: 'master',
+
+  // VU Meters compañeros
   showVuMeters: true,
+  showFreeze: true,
+  showSnapshot: true,
 
-  // Personalización estética (hereda tokens CSS por defecto)
-  theme: {
-    bg: '#0a0d12',
-    grid: '#1a2230',
-    traceL: '#00ffcc',
-    traceR: '#ff0077',
-    spectrum: '#00e676'
-  },
-
-  // Opciones de captura y canal
-  channels: ['Stereo', 'Left', 'Right'],
-  defaultChannel: 'Stereo',
-
-  // Callback de cambio de tap (DSP Multi-Tap)
-  onTapSelected: (tapIndex) => {
-    bridge.setActiveScopeTap(tapIndex);
+  // Callback de cambio de tap por carril
+  onTapChange: (tapId, laneIdx) => {
+    bridge.setActiveScopeTap(tapId, laneIdx);
   }
 });
 
-// ─── Caso 2: Modal flotante arrastrable (estilo OscilloscopeModal de ABDMS2000) ───
+// ─── Caso 2: Modal flotante arrastrable con Multi-Lane ───
 const floatingScope = createScope({
   containerId: 'floating-scope',
   mountMode: 'floating',                // Widget flotante con drag, open/close, botón ×
-  enabledModes: ['oscilloscope', 'spectrum'],
+  maxLanes: 4,
+  layout: '1',
+  enabledModes: ['oscilloscope', 'spectrum', 'lissajous', 'phase', 'spectrogram'],
   showVuMeters: false
 });
 floatingScope.open();   // Muestra con animación
 floatingScope.close();  // Oculta
 floatingScope.toggle(); // Alterna
 
-// ─── Caso 3: Solo 1 modo → sin pestañas, 100% de área útil ───
+// ─── Caso 3: Solo 1 carril / Solo 1 modo → máxima ligereza y área útil ───
 const miniScope = createScope({
   containerId: 'mini-scope',
+  maxLanes: 1,
   enabledModes: ['oscilloscope'],
-  showVuMeters: false,
-  grid: false
+  showVuMeters: false
 });
 ```
 

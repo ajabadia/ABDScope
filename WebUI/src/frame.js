@@ -1,4 +1,4 @@
-/**
+﻿/**
  * ABDScope Data Frame Engine
  * ==========================
  * Normalizes incoming audio/telemetry packets into structured ScopeDataFrame contracts.
@@ -107,11 +107,21 @@ export function createDataFrame(raw = {}, options = {}) {
   const signalType = safeRaw.signalType ?? (safeOpts.signalType === 'control' ? 'control' : 'audio');
   const sampleRate = safeRaw.sampleRate ?? 44100;
 
-  const timeDataL = raw.timeDataL instanceof Float32Array ? raw.timeDataL : new Float32Array(0);
-  const timeDataR = raw.timeDataR instanceof Float32Array ? raw.timeDataR : null;
+  const timeDataL = (raw.timeDataL instanceof Float32Array)
+    ? raw.timeDataL
+    : (Array.isArray(raw.timeDataL) ? new Float32Array(raw.timeDataL) : new Float32Array(0));
+  const timeDataR = (raw.timeDataR instanceof Float32Array)
+    ? raw.timeDataR
+    : (Array.isArray(raw.timeDataR) ? new Float32Array(raw.timeDataR) : null);
   const numSamples = timeDataL.length;
 
-  const spectrumDb = raw.spectrumDb instanceof Float32Array ? raw.spectrumDb : null;
+  let spectrumDb = (raw.spectrumDb instanceof Float32Array)
+    ? raw.spectrumDb
+    : (Array.isArray(raw.spectrumDb) ? new Float32Array(raw.spectrumDb) : null);
+
+  if (!spectrumDb && timeDataL.length >= 512 && signalType !== 'control') {
+    spectrumDb = computeSpectrumDb(timeDataL, sampleRate);
+  }
   const spectrumBins = spectrumDb ? spectrumDb.length : 0;
 
   // Trigger and Frequency Estimation
@@ -145,4 +155,70 @@ export function createDataFrame(raw = {}, options = {}) {
     peakR,
     phaseCorrelation
   };
+}
+
+/**
+ * Fast Radix-2 Real FFT fallback to compute spectrum magnitudes in dBfs when raw.spectrumDb is omitted.
+ * @param {Float32Array} timeData - Input PCM buffer
+ * @param {number} sampleRate - Sample rate in Hz
+ * @returns {Float32Array|null}
+ */
+export function computeSpectrumDb(timeData, sampleRate = 44100) {
+  const n = 512;
+  if (!timeData || timeData.length < n) return null;
+
+  const real = new Float32Array(n);
+  const imag = new Float32Array(n);
+
+  for (let i = 0; i < n; ++i) {
+    const w = 0.5 * (1.0 - Math.cos((2.0 * Math.PI * i) / (n - 1)));
+    real[i] = timeData[i] * w;
+  }
+
+  let j = 0;
+  for (let i = 0; i < n - 1; ++i) {
+    if (i < j) {
+      const tr = real[i]; real[i] = real[j]; real[j] = tr;
+      const ti = imag[i]; imag[i] = imag[j]; imag[j] = ti;
+    }
+    let k = n >> 1;
+    while (k <= j) {
+      j -= k;
+      k >>= 1;
+    }
+    j += k;
+  }
+
+  for (let len = 2; len <= n; len <<= 1) {
+    const half = len >> 1;
+    const angle = (-2.0 * Math.PI) / len;
+    const wStepR = Math.cos(angle);
+    const wStepI = Math.sin(angle);
+    for (let i = 0; i < n; i += len) {
+      let wr = 1.0;
+      let wi = 0.0;
+      for (let k = 0; k < half; ++k) {
+        const uR = real[i + k];
+        const uI = imag[i + k];
+        const vR = real[i + k + half] * wr - imag[i + k + half] * wi;
+        const vI = real[i + k + half] * wi + imag[i + k + half] * wr;
+        real[i + k] = uR + vR;
+        imag[i + k] = uI + vI;
+        real[i + k + half] = uR - vR;
+        imag[i + k + half] = uI - vI;
+        const nextWr = wr * wStepR - wi * wStepI;
+        wi = wr * wStepI + wi * wStepR;
+        wr = nextWr;
+      }
+    }
+  }
+
+  const bins = n >> 1;
+  const specDb = new Float32Array(bins);
+  const norm = 2.0 / n;
+  for (let i = 0; i < bins; ++i) {
+    const mag = Math.sqrt(real[i] * real[i] + imag[i] * imag[i]) * norm;
+    specDb[i] = mag > 1e-5 ? Math.max(-96.0, 20.0 * Math.log10(mag)) : -96.0;
+  }
+  return specDb;
 }

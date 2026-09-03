@@ -2,11 +2,7 @@
  * ABDScope Main Factory
  * =====================
  * Primary entry point for instantiating universal audio scopes in any ABDSynths project.
- * Decouples input ingestion, mount presentation, and view rendering.
- *
- * Constraints:
- * - Pure orchestrator, zero hardcoded rendering loops.
- * - Under 190 lines of code (Single Responsibility Principle).
+ * Supports Single, Dual Split, and Triple Multi-Lane visual analysis.
  */
 
 import { EmbeddedMount } from './mount/EmbeddedMount.js';
@@ -23,37 +19,32 @@ import { copyCanvasToClipboard, downloadCanvasAsPng } from './utils/exportImage.
  */
 export function createScope(config = {}) {
   const mountMode = config.mountMode || 'embedded';
-  const enabledModes = config.enabledModes || ['oscilloscope'];
+  const enabledModes = config.enabledModes || ['oscilloscope', 'spectrum', 'lissajous', 'phase', 'spectrogram'];
   let currentMode = config.defaultMode || enabledModes[0] || 'oscilloscope';
 
   let activeInput = null;
   let isFrozen = false;
   let isDestroyed = false;
-  const renderers = new Map();
+  let mount = null;
+  let vuMeter = null;
+  const legacyRenderers = new Map();
 
   // Handle mode selection callback
-  const onModeSelect = (mode) => {
-    if (renderers.has(mode)) {
-      currentMode = mode;
-      const r = renderers.get(mode);
-      if (mount.canvas) {
-        const dpr = typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1;
-        r.resize(mount.canvas.clientWidth || 300, mount.canvas.clientHeight || 150, dpr);
-      }
-    }
+  const onModeSelect = (mode, laneIdx = 0) => {
+    if (laneIdx === 0) currentMode = mode;
+    if (config.onModeSelect) config.onModeSelect(mode, laneIdx);
   };
 
   // Handle resize callback
   const onResize = (w, h, dpr) => {
-    const r = renderers.get(currentMode);
-    if (r) r.resize(w, h, dpr);
-    if (vuMeter && mount.vuContainer) {
+    if (vuMeter && mount && mount.vuContainer) {
       vuMeter.resize(mount.vuContainer.clientWidth || 24, h, dpr);
     }
   };
 
   const onFreezeToggle = (frozen) => {
     isFrozen = frozen;
+    if (mount && mount.freeze) mount.freeze(frozen);
   };
 
   const onSnapshot = () => {
@@ -65,6 +56,7 @@ export function createScope(config = {}) {
   // Mount instantiation
   const mountOptions = {
     ...config,
+    maxLanes: config.maxLanes || 1,
     enabledModes,
     defaultMode: currentMode,
     onModeSelect,
@@ -73,11 +65,11 @@ export function createScope(config = {}) {
     onSnapshot
   };
 
-  const mount = mountMode === 'floating'
+  mount = mountMode === 'floating'
     ? new FloatingMount(mountOptions)
     : new EmbeddedMount(config.containerId, mountOptions);
 
-  const vuMeter = (config.showVuMeters && mount.vuContainer)
+  vuMeter = (config.showVuMeters && mount.vuContainer)
     ? new VuMeterRenderer(mount.vuContainer)
     : null;
 
@@ -105,9 +97,15 @@ export function createScope(config = {}) {
       }
     }
 
-    const renderer = renderers.get(currentMode);
-    if (renderer) {
-      renderer.render(frame, config.renderOptions || {});
+    // Render multi-lane mount
+    if (mount.render) {
+      mount.render(frame, config.renderOptions || {});
+    }
+
+    // Legacy renderers support
+    const legacyR = legacyRenderers.get(currentMode);
+    if (legacyR) {
+      legacyR.render(frame, config.renderOptions || {});
     }
 
     if (vuMeter) {
@@ -121,20 +119,34 @@ export function createScope(config = {}) {
     get currentMode() { return currentMode; },
     get isDestroyed() { return isDestroyed; },
     get isOpen() { return mount.isOpen ?? true; },
+    get layout() { return mount.layout || 'single'; },
 
     registerRenderer(modeName, rendererInstance) {
       if (!rendererInstance) return;
-      renderers.set(modeName, rendererInstance);
+      legacyRenderers.set(modeName, rendererInstance);
       if (mount.canvas) {
         rendererInstance.init(mount.canvas, config.rendererOptions || {});
       }
     },
 
     setMode(modeName) {
-      if (renderers.has(modeName)) {
-        mount.setActiveTab?.(modeName);
-        onModeSelect(modeName);
-      }
+      currentMode = modeName;
+      mount.setActiveTab?.(modeName);
+    },
+
+    setLayout(layout) {
+      if (mount.setLayout) mount.setLayout(layout);
+    },
+
+    getLane(laneIndex = 0) {
+      return mount.lanes?.[laneIndex] ?? null;
+    },
+
+    setLaneConfig(laneIndex, { mode, tapId }) {
+      const lane = mount.lanes?.[laneIndex];
+      if (!lane) return;
+      if (mode) lane.setMode(mode);
+      if (tapId) lane.setActiveTap(tapId);
     },
 
     connectAnalyser(analyserNode, options = {}) {
@@ -191,8 +203,8 @@ export function createScope(config = {}) {
         vuMeter.destroy();
       }
 
-      renderers.forEach(r => r.destroy());
-      renderers.clear();
+      legacyRenderers.forEach(r => r.destroy());
+      legacyRenderers.clear();
 
       mount.destroy();
     }

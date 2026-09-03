@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.22)
+﻿cmake_minimum_required(VERSION 3.22)
 project(ABDScope VERSION 0.1.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
@@ -16,16 +16,37 @@ add_subdirectory(Source)
 # Target Alias for clean consumer integration: ABDScope::ABDScopeCore
 add_library(ABDScope::ABDScopeCore ALIAS ABDScopeCore)
 
+# Optional Native JUCE GUI Standalone Demo
+if(NOT TARGET juce::juce_core)
+  if(EXISTS "C:/JUCE/CMakeLists.txt")
+    add_subdirectory("C:/JUCE" _juce_build EXCLUDE_FROM_ALL)
+  elseif(EXISTS "D:/desarrollos/juce/CMakeLists.txt")
+    add_subdirectory("D:/desarrollos/juce" _juce_build EXCLUDE_FROM_ALL)
+  endif()
+endif()
+
+# Embedded WebUI Binary Assets for WebView2
+if(COMMAND juce_add_binary_data)
+  file(GLOB_RECURSE ABDSCOPE_WEB_ASSETS
+    "${CMAKE_CURRENT_SOURCE_DIR}/WebUI/src/*"
+  )
+  list(APPEND ABDSCOPE_WEB_ASSETS "${CMAKE_CURRENT_SOURCE_DIR}/WebUI/index.html")
+  list(FILTER ABDSCOPE_WEB_ASSETS EXCLUDE REGEX "/demo/")
+  list(FILTER ABDSCOPE_WEB_ASSETS EXCLUDE REGEX "/tests/")
+  list(FILTER ABDSCOPE_WEB_ASSETS EXCLUDE REGEX "/node_modules/")
+
+  juce_add_binary_data(ABDScopeWebAssets
+    HEADER_NAME "ABDScopeWebAssets.h"
+    NAMESPACE "ABDScopeWebAssets"
+    SOURCES ${ABDSCOPE_WEB_ASSETS}
+  )
+  target_link_libraries(ABDScopeCore INTERFACE ABDScopeWebAssets)
+  add_library(ABDScope::ABDScopeWebAssets ALIAS ABDScopeWebAssets)
+endif()
+
 # Standalone C++ Smoke Test (MSVC Validation)
 add_executable(ABDScope_CppSmoke Source/tests/StandaloneSmoke.cpp)
 target_link_libraries(ABDScope_CppSmoke PRIVATE ABDScopeCore)
-
-# Optional Native JUCE GUI Standalone Demo
-if(EXISTS "C:/JUCE/CMakeLists.txt")
-  add_subdirectory("C:/JUCE" _juce_build EXCLUDE_FROM_ALL)
-elseif(EXISTS "D:/desarrollos/juce/CMakeLists.txt")
-  add_subdirectory("D:/desarrollos/juce" _juce_build EXCLUDE_FROM_ALL)
-endif()
 
 if(TARGET juce::juce_gui_extra)
   juce_add_gui_app(ABDScope_GuiDemo

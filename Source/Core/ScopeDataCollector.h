@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <vector>
 #include <memory>
@@ -56,6 +56,25 @@ public:
     bool selectTap(std::string_view name) noexcept {
         for (size_t i = 0; i < m_taps.size(); ++i) {
             if (m_taps[i]->getName() == name) {
+                selectTap(i);
+                return true;
+            }
+        }
+        // Case-insensitive / slug fallback
+        auto toLower = [](std::string_view s) {
+            std::string res;
+            res.reserve(s.size());
+            for (char c : s) res.push_back(static_cast<char>(std::tolower(static_cast<unsigned char>(c))));
+            return res;
+        };
+        std::string query = toLower(name);
+        for (size_t i = 0; i < m_taps.size(); ++i) {
+            std::string tapLower = toLower(m_taps[i]->getName());
+            if (tapLower.find(query) != std::string::npos || query.find(tapLower) != std::string::npos
+                || (query == "hardware_in" && tapLower.find("hardware") != std::string::npos)
+                || (query == "diag_tone" && tapLower.find("diag") != std::string::npos)
+                || (query == "stimulus" && tapLower.find("stimulus") != std::string::npos))
+            {
                 selectTap(i);
                 return true;
             }

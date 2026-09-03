@@ -2,7 +2,8 @@
  * ABDScope Trigger Engine
  * =======================
  * Pure mathematical algorithms for zero-crossing detection with adaptive hysteresis,
- * sub-sample interpolation, fundamental frequency tracking, and MIDI note identification.
+ * sub-sample interpolation, sub-bass fundamental frequency tracking (20 Hz - 20 kHz),
+ * and MIDI note identification.
  *
  * Constraints:
  * - Pure functions, zero DOM dependencies, zero allocations in steady loops.
@@ -13,6 +14,7 @@ const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 
 
 /**
  * Detect zero-crossing index with hysteresis and sub-sample precision.
+ * Supports deep sub-bass (< 140 Hz down to 20 Hz) via peak-scaled hysteresis.
  * @param {Float32Array} buffer - PCM audio samples (-1.0 to 1.0)
  * @param {Object} [options] - Detection configuration
  * @returns {number} Fractional sample index where positive zero-crossing occurs, or 0
@@ -21,13 +23,22 @@ export function findZeroCrossing(buffer, options = {}) {
   const len = buffer?.length ?? 0;
   if (len < 4) return 0;
 
+  // Compute peak amplitude for adaptive hysteresis if not explicitly provided
+  let peak = 0.0;
+  const scanLen = Math.min(len, 1024);
+  for (let i = 0; i < scanLen; ++i) {
+    const abs = Math.abs(buffer[i]);
+    if (abs > peak) peak = abs;
+  }
+
   const triggerLevel = options.triggerLevel ?? 0.0;
-  const hysteresis = Math.max(0.001, options.hysteresis ?? 0.03);
+  const defaultHys = Math.max(0.005, Math.min(0.15, peak * 0.12));
+  const hysteresis = Math.max(0.001, options.hysteresis ?? defaultHys);
   const armThreshold = triggerLevel - hysteresis;
   const fireThreshold = triggerLevel + hysteresis;
 
   const start = Math.max(1, options.searchStart ?? 1);
-  const end = Math.min(len - 1, options.searchEnd ?? Math.floor(len * 0.88));
+  const end = Math.min(len - 1, options.searchEnd ?? Math.floor(len * 0.92));
 
   let isArmed = false;
 
@@ -52,7 +63,8 @@ export function findZeroCrossing(buffer, options = {}) {
 }
 
 /**
- * Estimate the fundamental frequency (Hz) using zero-crossing period analysis.
+ * Estimate fundamental frequency (Hz) with sub-bass robustness (20 Hz - 20 kHz).
+ * Uses multi-period averaging across extended search window (up to 4096 samples).
  * @param {Float32Array} buffer - PCM audio samples
  * @param {number} [sampleRate=44100] - Audio sample rate in Hz
  * @param {Object} [options] - Configuration
@@ -62,15 +74,25 @@ export function estimateFundamentalFrequency(buffer, sampleRate = 44100, options
   const len = buffer?.length ?? 0;
   if (len < 32 || sampleRate <= 0) return 0;
 
-  const hysteresis = options.hysteresis ?? 0.04;
+  // Compute signal peak to adapt hysteresis dynamically
+  let peak = 0.0;
+  const scanLimit = Math.min(len, 2048);
+  for (let i = 0; i < scanLimit; ++i) {
+    const abs = Math.abs(buffer[i]);
+    if (abs > peak) peak = abs;
+  }
+  if (peak < 0.005) return 0; // Silence
+
+  const defaultHys = Math.max(0.005, Math.min(0.18, peak * 0.15));
+  const hysteresis = options.hysteresis ?? defaultHys;
   const armThreshold = -hysteresis;
   const fireThreshold = hysteresis;
 
   const crossings = [];
   let isArmed = false;
-  const maxSearch = Math.min(len - 1, 2048);
+  const maxSearch = Math.min(len - 1, 4096);
 
-  for (let i = 1; i < maxSearch && crossings.length < 16; ++i) {
+  for (let i = 1; i < maxSearch && crossings.length < 24; ++i) {
     const sample = buffer[i];
 
     if (!isArmed) {
@@ -88,6 +110,7 @@ export function estimateFundamentalFrequency(buffer, sampleRate = 44100, options
 
   if (crossings.length < 2) return 0;
 
+  // Calculate period deltas
   let totalPeriod = 0;
   const numPeriods = crossings.length - 1;
   for (let i = 0; i < numPeriods; ++i) {
@@ -98,13 +121,13 @@ export function estimateFundamentalFrequency(buffer, sampleRate = 44100, options
   if (avgPeriodSamples <= 1.0) return 0;
 
   const freq = sampleRate / avgPeriodSamples;
-  return (freq >= 15 && freq <= 22000) ? Math.round(freq * 10) / 10 : 0;
+  return (freq >= 18.0 && freq <= 22000.0) ? Math.round(freq * 10) / 10 : 0;
 }
 
 /**
- * Convert frequency in Hz to nearest MIDI note name with octave (e.g. 440 Hz -> "A4").
+ * Convert frequency in Hz to nearest MIDI note name with octave (e.g. 440 Hz -> "A4", 55 Hz -> "A1").
  * @param {number} freqHz - Frequency in Hz
- * @returns {string} Formatted note name (e.g. "A4", "C#3") or empty string if invalid
+ * @returns {string} Formatted note name (e.g. "A4", "C#3", "A1") or empty string if invalid
  */
 export function frequencyToNoteName(freqHz) {
   if (freqHz < 16.0 || freqHz > 20000.0) return '';

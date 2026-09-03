@@ -4,6 +4,7 @@
 #include <cmath>
 #include <string_view>
 #include <array>
+#include <algorithm>
 
 namespace abd::scope {
 
@@ -15,7 +16,7 @@ struct TriggerResult {
 };
 
 /**
- * Pure C++ Zero-Crossing Detector with Hysteresis, Sub-Sample Phase Lock & Pitch Estimator.
+ * Pure C++ Zero-Crossing Detector with Adaptive Hysteresis, Sub-Bass Tracking (< 140 Hz) & Sub-Sample Lock.
  */
 class TriggerDetector final {
 public:
@@ -30,38 +31,56 @@ public:
         TriggerResult result;
         if (samples == nullptr || numSamples < 16) return result;
 
-        bool isArmArmed = false;
+        // Compute signal peak amplitude for adaptive hysteresis in sub-bass / low dynamics
+        float peak = 0.0f;
+        const size_t scanLimit = std::min(numSamples, size_t(2048));
+        for (size_t i = 0; i < scanLimit; ++i) {
+            const float a = std::fabs(samples[i]);
+            if (a > peak) peak = a;
+        }
+
+        if (peak < 0.005f) return result; // Silence
+
+        const float effectiveHysteresis = (hysteresis > 0.0f) 
+            ? hysteresis 
+            : std::clamp(peak * 0.12f, 0.005f, 0.15f);
+
+        bool isArmed = false;
         size_t firstTrigger = 0;
         size_t secondTrigger = 0;
         size_t triggerCount = 0;
 
-        for (size_t i = 1; i < numSamples - 1; ++i) {
+        const size_t maxSearch = std::min(numSamples - 1, size_t(4096));
+
+        for (size_t i = 1; i < maxSearch; ++i) {
             const float prev = samples[i - 1];
             const float curr = samples[i];
 
             // 1. Arm trigger when signal goes below negative hysteresis threshold
-            if (curr < -hysteresis) {
-                isArmArmed = true;
-            }
-
-            // 2. Fire on rising zero-crossing
-            if (isArmArmed && prev <= 0.0f && curr > 0.0f) {
-                const float dy = curr - prev;
-                const float frac = dy > 1e-5f ? (-prev / dy) : 0.0f;
-
-                if (triggerCount == 0) {
-                    firstTrigger = i;
-                    result.triggerIndex = i;
-                    result.triggerFraction = frac;
-                } else if (triggerCount == 1) {
-                    secondTrigger = i;
+            if (!isArmed) {
+                if (curr < -effectiveHysteresis) {
+                    isArmed = true;
                 }
-                triggerCount++;
-                isArmArmed = false;
+            } else {
+                // 2. Fire on rising zero-crossing
+                if (prev <= 0.0f && curr > 0.0f) {
+                    const float dy = curr - prev;
+                    const float frac = dy > 1e-5f ? (-prev / dy) : 0.0f;
 
-                // Stop early if we have found two consecutive cycle points
-                if (triggerCount >= 2 && i > (numSamples / 2)) {
-                    break;
+                    if (triggerCount == 0) {
+                        firstTrigger = i;
+                        result.triggerIndex = i;
+                        result.triggerFraction = std::clamp(frac, 0.0f, 1.0f);
+                    } else if (triggerCount == 1) {
+                        secondTrigger = i;
+                    }
+                    triggerCount++;
+                    isArmed = false;
+
+                    // Stop early if we have found two consecutive cycle points
+                    if (triggerCount >= 2 && i > (numSamples / 2)) {
+                        break;
+                    }
                 }
             }
         }
@@ -69,15 +88,20 @@ public:
         // 3. Estimate fundamental frequency
         if (triggerCount >= 2 && secondTrigger > firstTrigger && sampleRate > 0.0f) {
             const size_t periodSamples = secondTrigger - firstTrigger;
-            result.estimatedFrequencyHz = sampleRate / static_cast<float>(periodSamples);
-            result.noteName = frequencyToNoteName(result.estimatedFrequencyHz);
+            if (periodSamples > 1) {
+                const float freq = sampleRate / static_cast<float>(periodSamples);
+                if (freq >= 18.0f && freq <= 22000.0f) {
+                    result.estimatedFrequencyHz = freq;
+                    result.noteName = frequencyToNoteName(result.estimatedFrequencyHz);
+                }
+            }
         }
 
         return result;
     }
 
     static std::string_view frequencyToNoteName(float freqHz) noexcept {
-        if (freqHz < 20.0f || freqHz > 20000.0f) return "";
+        if (freqHz < 18.0f || freqHz > 20000.0f) return "";
 
         static constexpr std::array<std::string_view, 12> NOTE_NAMES = {
             "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"

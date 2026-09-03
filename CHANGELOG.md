@@ -7,11 +7,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.2.0-beta] - 2026-09-02
+
+### Added
+- **Multi-Lane Responsive 2-Column Grid Architecture**:
+  - `LaneController` managing modular lanes with independent canvases, DPR scaling, and `ResizeObserver`.
+  - Responsive 2-column grid layout with per-lane column span (`span 1` for compact modes like Lissajous and Phase; `span 2` for panoramic modes like Oscilloscope, FFT Spectrum, and Waterfall).
+  - **Auto-Expansion for Solitary Lanes**: 1-column lanes that sit alone on a row without a partner automatically expand to 2 columns (100% full width), eliminating empty gaps.
+  - **Intelligent Non-Duplicated Assignment**: Adding new lanes dynamically assigns the first unused visualization mode and input signal probe, with 100% state preservation of existing lanes.
+  - Manual column span toggle button (`[ ½ ]` / `[ 1 ]`) in each lane header.
+  - Automatic container query / narrow viewport fallback (`< 480px` forces full width).
+  - Configurable `maxLanes` parameter (default: 1) with instant layout switch buttons (`[ 1 ]`, `[ 2 ]`, `[ 3 ]`, `[ 4 ]`).
+  - Automatic vertical scrolling and guaranteed minimum lane height (`minLaneHeight: 130px`).
+- **Per-Lane Tools & Telemetry**:
+  - Independent per-lane **Freeze / Hold** button allowing reference signal A/B comparison against live audio.
+  - Independent per-lane **Snapshot** PNG export button.
+  - Dynamic probe selector dropdown populated from caller's `availableTaps`.
+  - Independent real-time Note & Frequency badge (`A4 (440 Hz)` / `-12 dB`) displayed inside each lane header.
+- **Sub-Bass Pitch Lock & Trigger Stabilization (< 140 Hz down to 20 Hz)**:
+  - Peak-amplitude adaptive hysteresis in JavaScript (`trigger.js`) and C++ (`TriggerDetector.h`).
+  - Extended 4096-sample analysis window eliminating waveform jitter and phase hopping on deep bass notes (30 Hz - 65 Hz).
+- **Native C++ Standalone GUI Demo**:
+  - `ABDScope Native GUI Demo.exe` compiled with MSVC C++20 and linked with JUCE graphics.
+- **Unified Build & Test Pipeline (`build.bat`)**:
+  - CMake C++20 MSVC release compilation + Standalone C++ smoke sanity verification + Vitest unit test suite (56 tests, 100% pass).
+
+---
+
 ## [0.1.0-alpha] - 2026-09-02
 
 ### Added
 - **Repository Setup**: Initial directory tree, `.gitignore`, `package.json`, `vitest.config.js`.
-- **Architectural Specification**: Complete 3-tier decoupled pipeline specification in `ARCHITECTURE_SPEC.md` v2.0.
-- **Roadmap & Execution Plan**: 5-phase structured roadmap in `ROADMAP.md` v2.0.
-- **Engineering Governance**: Integrated coding standards (<200 lines/file, SRP, lock-free safety, zero dead code, 100% English naming).
-- **Mandatory Documentation**: Established `README.md`, `CHANGELOG.md`, `HANDOFF.md`, and `ROADMAP.md`.
+- **Architectural Specification**: Complete 3-tier decoupled pipeline specification in `ARCHITECTURE_SPEC.md`.
+- **C++ Lock-Free DSP Core**: `SpscRingBuffer.h`, `ScopeTap.h`, `ScopeDataCollector.h`, `TriggerDetector.h`, `ScopeFrameSerializer.h`.
+- **WebUI Renderers**: `OscilloscopeRenderer`, `SpectrumRenderer`, `LissajousRenderer`, `PhaseMeterRenderer`, `SpectrogramRenderer`, `VuMeterRenderer`.
+- **Dual-Input Engine**: `AnalyserInput` (Web Audio API) and `PushInput` (C++ Bridge JSON packets).
+- **Mount Modes**: `EmbeddedMount` (inline chassis panel) and `FloatingMount` (draggable desktop modal).

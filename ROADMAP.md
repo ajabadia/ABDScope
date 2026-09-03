@@ -193,14 +193,14 @@
 ### FASE 6: Mejoras Futuras & Evolución (Post-V1)
 > **Objetivo:** Funcionalidades avanzadas y extensiones para análisis multi-canal.
 
-- [ ] **6.1 Modo Multi-Lane / Multi-Canal Apilado:**
-  - Posibilidad de apilar varias líneas de visualización (carriles independientes) en modo embebido para comparar simultáneamente múltiples sondas (ej. Osc 1, Osc 2, Filtro y Salida Master).
+- [x] **6.1 Modo Multi-Lane / Multi-Canal Apilado:**
+  - Posibilidad de apilar varias líneas de visualización (carriles independientes con modo y sonda independientes) en modo embebido y flotante con botones `[ 1 ]`, `[ 2 ]`, `[ 3 ]` para comparar simultáneamente múltiples señales (ej. Osc 1 en Osciloscopio + Master en Espectro).
 - [ ] **6.2 Selector de Ventanas FFT (Hann, Blackman-Harris, Flat-Top):**
-  - Configuración de la función de enventanado para análisis espectral de precisión en laboratorio.
+  - Descartado / Posponer (Hann fijo optimizado para sintetizadores y rendimiento).
 - [ ] **6.3 Modos de Visualización 3D / Isometric Waterfall:**
-  - Cascada espectral en perspectiva tridimensional.
-- [ ] **6.4 Refinamiento de Trigger en Sub-graves (< 140 Hz):**
-  - Autocovarianza de periodo o Schmitt-trigger adaptativo con búfer circular de ventana extendida (4096 muestras) para estabilización perfecta en notas de bajo profundo.
+  - Descartado (Spectrogram 2D continuo con mapa de calor plasma/inferno ofrece máxima claridad métrica y rendimiento).
+- [x] **6.4 Refinamiento de Trigger en Sub-graves (< 140 Hz):**
+  - Histéresis adaptativa escalada a amplitud de pico y ventana de búsqueda extendida (4096 muestras) para estabilización perfecta en notas de bajo profundo (20 Hz a 60 Hz).
 
 ---
 

@@ -1,4 +1,4 @@
-project(ABDScopeCore LANGUAGES CXX)
+﻿project(ABDScopeCore LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -19,6 +19,9 @@ target_sources(ABDScopeCore INTERFACE
   ${CMAKE_CURRENT_SOURCE_DIR}/Core/TriggerDetector.h
   ${CMAKE_CURRENT_SOURCE_DIR}/Core/ScopeFrameSerializer.h
   ${CMAKE_CURRENT_SOURCE_DIR}/JUCE/JuceScopeComponent.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/JUCE/JuceWebScopeComponent.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/JUCE/ScopeResourceProvider.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/JUCE/ScopeResourceProvider.cpp
 )
 
 target_compile_definitions(ABDScopeCore INTERFACE

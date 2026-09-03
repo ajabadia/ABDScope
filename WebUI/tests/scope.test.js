@@ -20,7 +20,7 @@ describe('Scope Main Factory: createScope', () => {
     const canvas = document.querySelector('.abd-scope-canvas');
     expect(canvas).not.toBeNull();
 
-    const tabs = document.querySelectorAll('.abd-scope-tab-btn');
+    const tabs = document.querySelectorAll('.abd-scope-lane-mode-btn');
     expect(tabs.length).toBe(2);
 
     scope.destroy();

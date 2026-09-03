@@ -90,7 +90,5 @@ int main() {
     std::cout << "============================================" << std::endl;
     std::cout << "  [SUCCESS] ALL C++ SMOKE TESTS PASSED!" << std::endl;
     std::cout << "============================================" << std::endl;
-    std::cout << "\nPresiona ENTER o cualquier tecla para salir..." << std::endl;
-    std::cin.get();
     return 0;
 }

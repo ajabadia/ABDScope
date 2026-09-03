@@ -1,10 +1,10 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ABDScope — Studio Audio Visualizer</title>
-  <link rel="stylesheet" href="../src/scope.css">
+  <title>ABDScope â€” Studio Audio Visualizer</title>
+  <link rel="stylesheet" href="../../WebUI/src/scope.css">
   <link rel="stylesheet" href="demo.css">
 </head>
 <body data-theme="ms2000">
@@ -49,6 +49,12 @@
       <div class="control-group">
         <div class="control-label"><span>Frequency</span><span id="val-freq">440 Hz</span></div>
         <input type="range" id="slider-freq" min="20" max="2000" step="1" value="440">
+        <div class="btn-group" style="margin-top: 4px;">
+          <button class="demo-btn" id="btn-freq-30" style="font-size: 9px; padding: 2px 4px;">30 Hz (Sub)</button>
+          <button class="demo-btn" id="btn-freq-55" style="font-size: 9px; padding: 2px 4px;">55 Hz (A1)</button>
+          <button class="demo-btn" id="btn-freq-110" style="font-size: 9px; padding: 2px 4px;">110 Hz (A2)</button>
+          <button class="demo-btn" id="btn-freq-440" style="font-size: 9px; padding: 2px 4px;">440 Hz (A4)</button>
+        </div>
       </div>
 
       <div class="control-group">
@@ -57,25 +63,13 @@
       </div>
 
       <div class="control-group">
-        <div class="control-label"><span>Stereo Phase / Spread</span><span id="val-phase">0° (Mono)</span></div>
+        <div class="control-label"><span>Stereo Phase / Spread</span><span id="val-phase">0Â° (Mono)</span></div>
         <input type="range" id="slider-phase" min="0" max="180" step="1" value="0">
       </div>
 
       <div class="control-group">
         <div class="control-label"><span>Gain</span><span id="val-gain">0.50</span></div>
         <input type="range" id="slider-gain" min="0" max="1" step="0.01" value="0.5">
-      </div>
-
-      <div class="control-group" style="margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--scope-border, rgba(255,255,255,0.1));">
-        <div class="control-label"><span>Oscilloscope Scale / Cycles</span></div>
-        <select id="select-cycles" class="demo-btn" style="width: 100%; margin-top: 4px; padding: 5px 8px; cursor: pointer;">
-          <option value="0" selected>Auto (Octave Adaptive)</option>
-          <option value="1">1 Cycle (Single Wave)</option>
-          <option value="2">2 Cycles</option>
-          <option value="4">4 Cycles</option>
-          <option value="8">8 Cycles</option>
-          <option value="fixed">Fixed Timebase (Raw Window)</option>
-        </select>
       </div>
 
       <div class="panel-title" style="margin-top: 12px;">Audio Engine Control</div>
@@ -94,19 +88,13 @@
   </main>
 
   <script type="module">
-    import { createScope } from '../src/scope.js';
-    import { OscilloscopeRenderer } from '../src/renderers/OscilloscopeRenderer.js';
-    import { SpectrumRenderer } from '../src/renderers/SpectrumRenderer.js';
-    import { LissajousRenderer } from '../src/renderers/LissajousRenderer.js';
-    import { PhaseMeterRenderer } from '../src/renderers/PhaseMeterRenderer.js';
-    import { SpectrogramRenderer } from '../src/renderers/SpectrogramRenderer.js';
+    import { createScope } from '../../WebUI/src/scope.js';
     import { TestSignalGenerator } from './test-signals.js';
 
     const sigGen = new TestSignalGenerator();
     let currentScope = null;
     let currentMountMode = 'embedded';
     let bridgeSimInterval = null;
-    let oscRenderer = null;
 
     function initScope(mountMode = 'embedded') {
       if (currentScope) {
@@ -123,6 +111,7 @@
       currentScope = createScope({
         containerId: 'scope-container',
         mountMode,
+        maxLanes: 4,
         title: 'ABDScope Telemetry',
         enabledModes: ['oscilloscope', 'spectrum', 'lissajous', 'phase', 'spectrogram'],
         defaultMode: 'oscilloscope',
@@ -135,8 +124,8 @@
           { id: 'lfo1', name: 'LFO 1 (CV)', type: 'control' }
         ],
         defaultTap: 'master',
-        onTapChange: (tapId) => {
-          console.log('[ABDScope Demo] Switched Tap:', tapId);
+        onTapChange: (tapId, laneIdx) => {
+          console.log(`[ABDScope Demo] Lane ${laneIdx} Switched Tap:`, tapId);
         },
         onClose: () => {
           document.getElementById('btn-mount-floating').classList.remove('active');
@@ -146,30 +135,8 @@
         }
       });
 
-      oscRenderer = new OscilloscopeRenderer();
-      applyCycleSetting();
-
-      currentScope.registerRenderer('oscilloscope', oscRenderer);
-      currentScope.registerRenderer('spectrum', new SpectrumRenderer());
-      currentScope.registerRenderer('lissajous', new LissajousRenderer());
-      currentScope.registerRenderer('phase', new PhaseMeterRenderer());
-      currentScope.registerRenderer('spectrogram', new SpectrogramRenderer());
-
       if (mountMode === 'floating') {
         currentScope.open();
-      }
-    }
-
-    function applyCycleSetting() {
-      if (!oscRenderer) return;
-      const sel = document.getElementById('select-cycles');
-      const val = sel ? sel.value : '0';
-      if (val === 'fixed') {
-        oscRenderer.autoFit = false;
-        oscRenderer.targetCycles = 0;
-      } else {
-        oscRenderer.autoFit = true;
-        oscRenderer.targetCycles = parseInt(val, 10) || 0;
       }
     }
 
@@ -222,11 +189,18 @@
 
     // Sliders
     const sFreq = document.getElementById('slider-freq');
-    sFreq.oninput = (e) => {
-      const hz = parseFloat(e.target.value);
+    function setFreq(hz) {
+      sFreq.value = hz;
       document.getElementById('val-freq').textContent = `${hz} Hz`;
       sigGen.setFrequency(hz);
-    };
+    }
+    sFreq.oninput = (e) => setFreq(parseFloat(e.target.value));
+
+    // Preset Sub-Bass Buttons
+    document.getElementById('btn-freq-30').onclick = () => setFreq(30);
+    document.getElementById('btn-freq-55').onclick = () => setFreq(55);
+    document.getElementById('btn-freq-110').onclick = () => setFreq(110);
+    document.getElementById('btn-freq-440').onclick = () => setFreq(440);
 
     const sFm = document.getElementById('slider-fm');
     sFm.oninput = (e) => {
@@ -238,7 +212,7 @@
     const sPhase = document.getElementById('slider-phase');
     sPhase.oninput = (e) => {
       const deg = parseFloat(e.target.value);
-      let label = `${deg}°`;
+      let label = `${deg}Â°`;
       if (deg === 0) label += ' (Mono)';
       else if (deg === 90) label += ' (Wide Stereo)';
       else if (deg === 180) label += ' (Anti-Phase)';
@@ -251,11 +225,6 @@
       const val = parseFloat(e.target.value);
       document.getElementById('val-gain').textContent = val.toFixed(2);
       sigGen.setLevel(val);
-    };
-
-    // Cycle Mode Change
-    document.getElementById('select-cycles').onchange = () => {
-      applyCycleSetting();
     };
 
     // Mount Mode Toggle
