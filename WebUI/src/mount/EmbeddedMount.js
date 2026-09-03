@@ -1,4 +1,4 @@
-/**
+﻿/**
  * ABDScope Embedded Mount
  * =======================
  * Embeds the scope component directly within a designated DOM container element.
@@ -355,11 +355,23 @@ export class EmbeddedMount {
     if (this.isDestroyed || !dataFrame) return;
 
     this.lanes.forEach(lane => {
-      let laneFrame = dataFrame;
+      let laneFrame = null;
       if (dataFrame.taps && dataFrame.taps[lane.activeTap]) {
         laneFrame = dataFrame.taps[lane.activeTap];
+      } else if (dataFrame.tapId) {
+        const tapMatches = (lane.activeTap === dataFrame.tapId) ||
+                           (dataFrame.tapId.toLowerCase().includes(lane.activeTap.toLowerCase())) ||
+                           (lane.activeTap.toLowerCase().includes(dataFrame.tapId.toLowerCase()));
+        if (tapMatches) {
+          laneFrame = dataFrame;
+        }
+      } else if (!dataFrame.taps) {
+        laneFrame = dataFrame;
       }
-      lane.render(laneFrame, options);
+
+      if (laneFrame) {
+        lane.render(laneFrame, options);
+      }
     });
   }
 

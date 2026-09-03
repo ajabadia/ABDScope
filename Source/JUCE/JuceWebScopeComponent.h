@@ -6,6 +6,8 @@
 #include "../Core/ScopeFrameSerializer.h"
 #include "ScopeResourceProvider.h"
 #include <atomic>
+#include <map>
+#include <vector>
 
 namespace abd::scope {
 
@@ -33,7 +35,8 @@ public:
                              if (message.hasProperty("tapId"))
                              {
                                  auto tapId = message["tapId"].toString().toStdString();
-                                 scopeCollector.selectTap(tapId);
+                                 int laneIdx = message.hasProperty("laneIdx") ? static_cast<int>(message["laneIdx"]) : 0;
+                                 handleLaneTapChange(laneIdx, tapId);
                              }
                          }))
     {
@@ -73,28 +76,86 @@ public:
     [[nodiscard]] juce::WebBrowserComponent& getWebBrowser() noexcept { return webBrowser; }
 
 private:
+    void handleLaneTapChange(int laneIdx, const std::string& tapId)
+    {
+        laneTaps[laneIdx] = tapId;
+
+        // Keep all taps active that are assigned to at least one lane
+        for (size_t i = 0; i < scopeCollector.getTapCount(); ++i)
+        {
+            auto* tap = const_cast<ScopeTap*>(scopeCollector.getTap(i));
+            if (tap == nullptr) continue;
+            std::string slug = getTapSlug(tap);
+
+            bool needed = false;
+            for (const auto& [lane, assignedTap] : laneTaps)
+            {
+                if (assignedTap == slug || slug.find(assignedTap) != std::string::npos || assignedTap.find(slug) != std::string::npos)
+                {
+                    needed = true;
+                    break;
+                }
+            }
+            tap->setActive(needed);
+        }
+    }
+
     void timerCallback() override
     {
-        auto* activeTap = scopeCollector.getActiveTap();
-        if (activeTap == nullptr || !activeTap->isActive())
+        const size_t count = scopeCollector.getTapCount();
+        std::vector<ScopeTap*> activeTaps;
+        for (size_t i = 0; i < count; ++i)
+        {
+            auto* tap = const_cast<ScopeTap*>(scopeCollector.getTap(i));
+            if (tap != nullptr && tap->isActive())
+                activeTaps.push_back(tap);
+        }
+
+        if (activeTaps.empty())
             return;
 
-        std::string jsonPacket = frameSerializer.serializeActiveFrame(
-            activeTap,
-            static_cast<float>(sampleRate.load(std::memory_order_relaxed))
-        );
+        const float sr = static_cast<float>(sampleRate.load(std::memory_order_relaxed));
 
-        if (!jsonPacket.empty())
+        if (activeTaps.size() == 1)
         {
-            juce::String js = "if (window.__pushScopeFrame) { window.__pushScopeFrame("
-                            + juce::String(jsonPacket) + "); }";
-            webBrowser.evaluateJavascript(js);
+            std::string jsonPacket = frameSerializer.serializeActiveFrame(activeTaps[0], sr);
+            if (!jsonPacket.empty())
+            {
+                juce::String js = "if (window.__pushScopeFrame) { window.__pushScopeFrame("
+                                + juce::String(jsonPacket) + "); }";
+                webBrowser.evaluateJavascript(js);
+            }
+        }
+        else
+        {
+            // Multi-tap bundle: { "taps": { "hardware_in": {...}, "diag_tone": {...} } }
+            std::string bundle = "{\"taps\":{";
+            bool first = true;
+            for (auto* tap : activeTaps)
+            {
+                std::string tapJson = frameSerializer.serializeActiveFrame(tap, sr);
+                if (!tapJson.empty())
+                {
+                    if (!first) bundle += ",";
+                    bundle += "\"" + getTapSlug(tap) + "\":" + tapJson;
+                    first = false;
+                }
+            }
+            bundle += "}}";
+
+            if (!first)
+            {
+                juce::String js = "if (window.__pushScopeFrame) { window.__pushScopeFrame("
+                                + juce::String(bundle) + "); }";
+                webBrowser.evaluateJavascript(js);
+            }
         }
     }
 
     ScopeDataCollector& scopeCollector;
     ScopeFrameSerializer frameSerializer { 1024 };
     std::atomic<double> sampleRate { 44100.0 };
+    std::map<int, std::string> laneTaps;
 
     juce::WebBrowserComponent webBrowser;
 

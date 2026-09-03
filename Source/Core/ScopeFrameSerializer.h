@@ -1,14 +1,28 @@
-#pragma once
+﻿#pragma once
 
 #include <string>
 #include <vector>
 #include <sstream>
 #include <iomanip>
 #include <cmath>
+#include <algorithm>
 #include "ScopeTap.h"
 #include "TriggerDetector.h"
 
 namespace abd::scope {
+
+inline std::string getTapSlug(const ScopeTap* tap) noexcept {
+    if (tap == nullptr) return "";
+    std::string name = tap->getName();
+    std::string lower;
+    lower.reserve(name.size());
+    for (char c : name) lower.push_back(static_cast<char>(std::tolower(static_cast<unsigned char>(c))));
+
+    if (lower.find("hardware") != std::string::npos) return "hardware_in";
+    if (lower.find("diag") != std::string::npos)     return "diag_tone";
+    if (lower.find("stimulus") != std::string::npos) return "stimulus";
+    return lower;
+}
 
 /**
  * Message-thread Frame Serializer that decodes SPSC samples, calculates frame metrics,
@@ -40,13 +54,16 @@ public:
         const bool isStereo = (activeTap->getType() == ScopeTapType::StereoAudio);
         activeTap->read(m_tempL.data(), isStereo ? m_tempR.data() : nullptr, readCount);
 
-        // 2. Decimate down to targetSamples if readCount > targetSamples
-        const float step = static_cast<float>(readCount) / static_cast<float>(m_targetSamples);
+        // 2. For audio signals, extract the latest consecutive block of m_targetSamples (1:1 audio rate)
+        // Taking the contiguous tail avoids fractional sample stepping that causes waveform jitter and frequency warping
+        const size_t offset = (readCount > m_targetSamples) ? (readCount - m_targetSamples) : 0;
+        const size_t count = std::min(readCount, m_targetSamples);
+
         float sumSqL = 0.0f, sumSqR = 0.0f;
         float peakL = 0.0f, peakR = 0.0f;
 
         for (size_t i = 0; i < m_targetSamples; ++i) {
-            const size_t srcIdx = std::min(static_cast<size_t>(i * step), readCount - 1);
+            const size_t srcIdx = (i < count) ? (offset + i) : (count > 0 ? count - 1 : 0);
             const float sL = m_tempL[srcIdx];
             m_decimatedL[i] = sL;
             sumSqL += sL * sL;
@@ -74,8 +91,10 @@ public:
         std::ostringstream json;
         json << std::fixed << std::setprecision(4);
         json << "{\"signalType\":\"" << toString(activeTap->getType()) << "\","
+             << "\"tapId\":\"" << getTapSlug(activeTap) << "\","
              << "\"sampleRate\":" << static_cast<int>(sampleRate) << ","
              << "\"triggerIndex\":" << trigger.triggerIndex << ","
+             << "\"triggerFraction\":" << trigger.triggerFraction << ","
              << "\"estimatedFrequencyHz\":" << trigger.estimatedFrequencyHz << ","
              << "\"detectedNoteName\":\"" << trigger.noteName << "\","
              << "\"rmsL\":" << rmsL << ",\"rmsR\":" << rmsR << ","
