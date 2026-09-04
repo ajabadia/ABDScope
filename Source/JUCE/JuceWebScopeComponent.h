@@ -36,13 +36,17 @@ public:
                                    int refreshRateHz = 30)
         : scopeCollector(collector),
           sampleRate(initialSampleRate),
-          webBrowser(juce::WebBrowserComponent::Options{}
-                         .withBackend(juce::WebBrowserComponent::Options::Backend::webview2)
-                         .withNativeIntegrationEnabled(true)
-                         .withResourceProvider(abd::scope::scopeResourceProvider)
-                         .withEventListener("SET_ACTIVE_TAP", [this](const juce::var& message) {
-                             handleTapSubscription(message);
-                         }))
+          currentTheme("audiolab-light"),
+webBrowser(juce::WebBrowserComponent::Options{}
+                          .withBackend(juce::WebBrowserComponent::Options::Backend::webview2)
+                          .withNativeIntegrationEnabled(true)
+                          .withResourceProvider(abd::scope::scopeResourceProvider)
+                          .withEventListener("pageLoaded", [this](const juce::var&) {
+                              applyStoredTheme();
+                          })
+                          .withEventListener("SET_ACTIVE_TAP", [this](const juce::var& message) {
+                              handleTapSubscription(message);
+                          }))
     {
         // All-active fallback until the WebUI subscribes lanes (see class docs).
         activateAllTaps();
@@ -77,7 +81,15 @@ public:
     void setTheme(const std::string& themeName)
     {
         currentTheme = themeName;
-        juce::String js = "document.body.setAttribute('data-theme', '" + juce::String(themeName) + "');";
+        applyStoredTheme();
+    }
+
+    void applyStoredTheme()
+    {
+        if (currentTheme.empty()) return;
+        juce::String js = "document.documentElement.setAttribute('data-theme', '" + juce::String(currentTheme) + "');"
+                          "if (document.body) { document.body.setAttribute('data-theme', '" + juce::String(currentTheme) + "');"
+                          "document.body.className = 'theme-' + '" + juce::String(currentTheme) + "'; }";
         juce::MessageManager::callAsync([this, js]() { webBrowser.evaluateJavascript(js); });
     }
 
@@ -86,6 +98,10 @@ public:
     void reload()
     {
         auto rootUrl = juce::WebBrowserComponent::getResourceProviderRoot();
+        if (!currentTheme.empty())
+        {
+            rootUrl += (rootUrl.containsChar('?') ? "&theme=" : "?theme=") + juce::String(currentTheme);
+        }
         webBrowser.goToURL(rootUrl);
     }
 
@@ -194,7 +210,7 @@ private:
     std::atomic<double> sampleRate { 44100.0 };
 
     std::vector<size_t> m_laneTaps; ///< laneIdx -> registered tap index (NO_TAP if unsubscribed)
-    std::string currentTheme { "audiolab" };
+    std::string currentTheme { "audiolab-light" };
 
     juce::WebBrowserComponent webBrowser;
 

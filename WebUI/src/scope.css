@@ -80,13 +80,14 @@
   --scope-bg: #f8f9fa;
   --scope-surface: #ffffff;
   --scope-surface-elevated: #f1f3f5;
+  --scope-header-bg: #f1f3f5;
   --scope-accent: #00a86b;
   --scope-accent-hover: #008f5a;
   --scope-trace-l: #00a86b;
   --scope-trace-r: #0284c7;
   --scope-spectrum: #00a86b;
   --scope-grid: rgba(15, 23, 42, 0.08);
-  --scope-grid-center: rgba(15, 23, 42, 0.16);
+  --scope-grid-center: rgba(15, 23, 42, 0.18);
   --scope-border: #e2e8f0;
   --scope-border-strong: #cbd5e1;
   --scope-text-main: #1a1d20;
@@ -173,7 +174,7 @@
   align-items: center;
   gap: 6px;
   padding: 5px 8px;
-  background: rgba(0, 0, 0, 0.6);
+  background: var(--scope-header-bg, rgba(0, 0, 0, 0.6));
   border-bottom: 1px solid var(--scope-border);
   flex-shrink: 0;
 }
@@ -241,7 +242,7 @@
 .abd-scope-layout-btn.active,
 .abd-scope-layout-btn:not(:disabled):hover {
   background: var(--scope-accent);
-  color: #000;
+  color: #ffffff;
 }
 
 .abd-scope-freeze-btn,
@@ -267,7 +268,7 @@
 .abd-scope-freeze-btn:hover,
 .abd-scope-snapshot-btn:hover {
   background: var(--scope-accent);
-  color: #000;
+  color: #ffffff;
   border-color: var(--scope-accent);
 }
 
@@ -296,7 +297,7 @@
   flex: 1 1 auto;
   min-height: 0;
   display: flex;
-  background: #000000;
+  background: var(--scope-bg, #000000);
   overflow: hidden;
 }
 
@@ -317,7 +318,7 @@
   display: flex;
   flex-direction: column;
   width: 100%;
-  background: #000000;
+  background: var(--scope-bg, #000000);
   min-height: 125px;
   position: relative;
   grid-column: span 2; /* Full width 2-cols by default */
@@ -352,8 +353,8 @@
   justify-content: space-between;
   align-items: center;
   padding: 2px 6px;
-  background: rgba(15, 22, 34, 0.94);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  background: var(--scope-surface, rgba(15, 22, 34, 0.94));
+  border-bottom: 1px solid var(--scope-border);
   font-size: 9px;
   flex-shrink: 0;
   gap: 4px;
@@ -406,7 +407,7 @@
 .abd-scope-lane-mode-btn.active,
 .abd-scope-lane-mode-btn:hover {
   background: var(--scope-accent);
-  color: #000;
+  color: #ffffff;
 }
 
 /* Probe / Tap Selector Dropdown in Lane Header */
@@ -438,7 +439,7 @@
   font-family: var(--scope-font-lcd, monospace);
   font-size: 8.5px;
   font-weight: bold;
-  color: #54ff72;
+  color: var(--scope-accent, #54ff72);
   white-space: nowrap;
   padding: 0 2px;
 }
@@ -464,7 +465,7 @@
 .abd-scope-lane-tool-btn:hover,
 .abd-scope-lane-tool-btn.active {
   background: var(--scope-accent);
-  color: #000;
+  color: #ffffff;
   border-color: var(--scope-accent);
 }
 
@@ -493,7 +494,7 @@
 .abd-scope-vu-container {
   width: 24px;
   border-left: 1px solid var(--scope-border);
-  background: rgba(0, 0, 0, 0.4);
+  background: var(--scope-surface-elevated, rgba(0, 0, 0, 0.4));
   display: flex;
   padding: 4px 2px;
   gap: 2px;

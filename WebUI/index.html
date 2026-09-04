@@ -4,6 +4,13 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ABDScope Studio Telemetry</title>
+  <script>
+    (function() {
+      const params = new URLSearchParams(window.location.search);
+      const theme = params.get("theme") || "audiolab-light";
+      document.documentElement.setAttribute("data-theme", theme);
+    })();
+  </script>
   <link rel="stylesheet" href="./src/scope.css">
   <style>
     html, body {
@@ -25,9 +32,22 @@
     }
   </style>
 </head>
-<body data-theme="audiolab">
+<body data-theme="audiolab-light">
   <div id="scope-app"></div>
 
+  <script>
+    window.addEventListener("DOMContentLoaded", () => {
+      const params = new URLSearchParams(window.location.search);
+      const theme = params.get("theme") || "audiolab-light";
+      document.body.setAttribute("data-theme", theme);
+      document.body.classList.add("theme-" + theme);
+      try {
+        if (window.__JUCE__ && window.__JUCE__.backend) {
+          window.__JUCE__.backend.emitEvent("pageLoaded", {});
+        }
+      } catch (e) {}
+    });
+  </script>
   <script type="module">
     import { createScope } from './src/scope.js';
 

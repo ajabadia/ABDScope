@@ -33,11 +33,12 @@ export class OscilloscopeRenderer extends BaseRenderer {
 
     // 1. Clear or Analog Phosphor Trail
     const persist = options.persistence ?? this.persistence;
+    const bgClear = this.resolveColor(options.bgColor, '--scope-bg', 'rgba(8, 12, 18, 0.94)');
     if (persist > 0.01) {
-      ctx.fillStyle = `rgba(8, 12, 18, ${Math.max(0.08, 1.0 - persist)})`;
+      ctx.fillStyle = this.colorWithAlpha(bgClear, Math.max(0.08, 1.0 - persist));
       ctx.fillRect(0, 0, w, h);
     } else {
-      this.clear(options.bgColor || 'rgba(8, 12, 18, 0.94)');
+      this.clear(bgClear);
     }
 
     // 2. Reticle / Grid
@@ -45,8 +46,8 @@ export class OscilloscopeRenderer extends BaseRenderer {
       this.drawGrid({
         divisionsX: 8,
         divisionsY: isControl ? 5 : 4,
-        color: options.gridColor || 'rgba(255, 255, 255, 0.06)',
-        centerColor: isControl ? 'transparent' : 'rgba(255, 255, 255, 0.12)'
+        color: this.resolveColor(options.gridColor, '--scope-grid', 'rgba(255, 255, 255, 0.06)'),
+        centerColor: isControl ? 'transparent' : this.resolveColor(options.centerColor, '--scope-grid-center', 'rgba(255, 255, 255, 0.12)')
       });
     }
 

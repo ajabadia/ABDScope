@@ -36,7 +36,7 @@ export class SpectrumRenderer extends BaseRenderer {
     const bins = spectrumDb ? spectrumDb.length : 0;
 
     // 1. Clear background
-    this.clear(options.bgColor || 'rgba(8, 12, 18, 0.94)');
+    this.clear(options.bgColor || this.resolveColor(null, '--scope-bg', 'rgba(8, 12, 18, 0.94)'));
 
     // 2. Render Spectrum Grid (dB & Frequency lines)
     this._drawSpectrumGrid(options);
@@ -127,7 +127,7 @@ export class SpectrumRenderer extends BaseRenderer {
     const h = this.height;
 
     ctx.save();
-    ctx.strokeStyle = options.gridColor || 'rgba(255, 255, 255, 0.06)';
+    ctx.strokeStyle = options.gridColor || this.resolveColor(null, '--scope-grid', 'rgba(255, 255, 255, 0.06)');
     ctx.lineWidth = 1;
     ctx.beginPath();
 
