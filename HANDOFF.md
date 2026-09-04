@@ -2,7 +2,7 @@
 
 > **Last Updated:** September 4, 2026
 > **Current Version:** 0.3.1
-> **Status:** Phases 1–4, 6.1 & 6.4 completed with 100% JS tests passing (56/56) and a C++ smoke verification that runs real checks in both Debug and Release builds (see `Source/tests/StandaloneSmoke.cpp`).
+> **Status:** Phases 1–4, 6.1 & 6.4 completed with 100% JS tests passing (56/56) and a C++ smoke verification that runs real checks in both Debug and Release builds (see `Source/tests/StandaloneSmoke.cpp`). The JUCE integration is compile-verified against MSVC + JUCE 8.0.12 + the WebView2 SDK (see §3, v0.3.1).
 
 ---
 
@@ -49,6 +49,8 @@
   - Octave-qualified `detectedNoteName` in C++ (parity with JS contract).
   - `JuceWebScopeComponent` per-lane tap subscriptions (on-demand activation with all-active fallback).
   - Real C++ smoke verification in Release (explicit checks, no `assert`), relocated demo to `WebUI/demo/`, Mount refactor, `AnalyserInput.destroy()` fix, version alignment to 0.3.1.
+  - **JUCE integration compile-verified**: `JuceWebScopeComponent.h` + `ScopeResourceProvider.cpp` compile clean with MSVC against JUCE 8.0.12 + WebView2 SDK. Consumers must define `JUCE_USE_WIN_WEBVIEW2=1` and have the `Microsoft.Web.WebView2` NuGet package (see `docs/INTEGRATION_GUIDE.md` §9.2).
+  - `package-lock.json` (root + `WebUI/`) committed — use `npm ci` for reproducible installs.
 
 ---
 

@@ -21,6 +21,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **WebUI demo relocated** from `examples/browser_sandbox` to `WebUI/demo` so all guides and launch scripts agree; `npm run demo` serves it on port 8080.
 - **Version alignment** across CMake, package.json and docs set to 0.3.1.
 
+### Verified
+- **`JuceWebScopeComponent` compiled against real JUCE**: `JuceWebScopeComponent.h` and `ScopeResourceProvider.cpp` (with the generated `ABDScopeWebAssets.h`) compile clean with MSVC (`/W4 /std:c++20`) against JUCE 8.0.12 + the WebView2 SDK NuGet package. This closes the earlier caveat that the component had only been reviewed by hand.
+- **WebView2 compile requirements documented**: consuming targets must define `JUCE_USE_WIN_WEBVIEW2=1` (defaults to 0 in `juce_gui_extra`, which hides `withResourceProvider`) and have the `Microsoft.Web.WebView2` NuGet package installed — see `docs/INTEGRATION_GUIDE.md` §9.2.
+- **Reproducible installs**: both `package-lock.json` files (repo root + `WebUI/`) are committed; use `npm ci` instead of `npm install` for deterministic dependency trees.
+
 ---
 
 ## [0.3.0] - 2026-09-03
