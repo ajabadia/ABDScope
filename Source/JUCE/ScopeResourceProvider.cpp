@@ -25,6 +25,14 @@ std::optional<juce::WebBrowserComponent::Resource> scopeResourceProvider(const j
 {
     juce::String path = url;
 
+    // Strip query string and fragment before resolving resource filename
+    int queryIndex = path.indexOfChar('?');
+    if (queryIndex != -1)
+        path = path.substring(0, queryIndex);
+    int fragIndex = path.indexOfChar('#');
+    if (fragIndex != -1)
+        path = path.substring(0, fragIndex);
+
     // Strip scheme and host if present (e.g. juce://backend/path -> /path)
     if (path.startsWith("juce://"))
     {
