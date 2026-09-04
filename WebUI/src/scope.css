@@ -62,7 +62,9 @@
 }
 
 [data-theme="audiolab"],
-.theme-audiolab {
+[data-theme="dark"],
+.theme-audiolab,
+.theme-dark {
   --scope-bg: #06120a;
   --scope-surface: #0d1e12;
   --scope-surface-elevated: #132c1a;

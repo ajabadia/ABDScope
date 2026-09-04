@@ -117,9 +117,19 @@ ABDScope automatically adapts to host theme tokens or explicit data-attributes:
 <!-- Applies DeepMind Amber Theme -->
 <body data-theme="deepmind">
 
-<!-- Applies AudioLab Emerald Theme -->
+<!-- Applies AudioLab Emerald Dark Theme -->
 <body data-theme="audiolab">
+
+<!-- Applies AudioLab Clean Light Theme (Precision Lab / Sonarworks) -->
+<body data-theme="audiolab-light">
 ```
+
+### Dynamic Switching from C++ (`JuceWebScopeComponent`)
+Themes can be set at any time from C++ via:
+```cpp
+scopeComponent->setTheme("audiolab-light"); // or "audiolab", "ms2000", "cz101", "deepmind"
+```
+The component passes the active theme in the URL query string (`?theme=...`) and synchronizes reactively on the `pageLoaded` event. The embedded `ScopeResourceProvider` automatically strips query strings and fragments before resolving binary resources, ensuring robust loading without 404 errors. Canvas renderers dynamically adapt backgrounds, reticles, and traces to match dark and light themes seamlessly.
 
 ---
 

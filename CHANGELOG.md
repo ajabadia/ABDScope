@@ -1,5 +1,14 @@
 ﻿# Changelog
 
+## [0.3.2] - 2026-09-04
+### Added
+- Full first-class support for `audiolab-light` theme ("Técnica Refinada" Precision Lab / Sonarworks style: clean light `#f8f9fa` base, `#ffffff` surface, subtle reticle `rgba(15,23,42,0.08)`, and high-contrast `#00a86b` / `#0284c7` traces).
+- Reactive `pageLoaded` event listener in `JuceWebScopeComponent` for reliable, race-free theme initialization on page load.
+- Query string (`?theme=...`) and fragment sanitization in `ScopeResourceProvider`, allowing URL-driven configuration without breaking embedded binary asset resolution.
+### Changed
+- Refactored `OscilloscopeRenderer` and `SpectrumRenderer` to dynamically resolve canvas background and grid reticle colors via CSS custom properties (`--scope-bg`, `--scope-grid`, `--scope-grid-center`).
+- Improved active state button text contrast in light mode with `#ffffff` text on accent green.
+
 All notable changes to the **ABDScope** project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
