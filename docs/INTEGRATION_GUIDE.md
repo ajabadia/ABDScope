@@ -474,7 +474,7 @@ target_link_libraries(MyPlugin PRIVATE ABDScope::ABDScopeCore)
 > ```
 > Without both the NuGet package and this macro the component fails to compile (`withResourceProvider is not a member of juce::WebBrowserComponent::Options`).
 > 
-> Verified in this repository: `JuceWebScopeComponent.h` and `ScopeResourceProvider.cpp` compile clean with MSVC + JUCE 8.0.12 + WebView2 SDK when the macro is defined.
+> Verified in this repository: `JuceWebScopeComponent.h` and `ScopeResourceProvider.cpp` compile clean with MSVC + JUCE 8.0.12 + WebView2 SDK when the macro is defined. The same two files also compile clean against **JUCE 8.0.4** (the version pinned by the ABDAudioLab consumer project), so the component is compatible with both 8.0.4 and 8.0.12.
 
 ---
 
