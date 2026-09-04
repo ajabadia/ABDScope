@@ -23,7 +23,7 @@ if %ERRORLEVEL% NEQ 0 (
 )
 
 echo.
-echo Running C++ Standalone Sanity Verification...
+echo Running C++ Standalone Sanity Verification (real checks, Debug+Release safe)...
 build\Release\ABDScope_CppSmoke.exe
 if %ERRORLEVEL% NEQ 0 (
     echo [ERROR] C++ sanity verification failed!
@@ -32,7 +32,7 @@ if %ERRORLEVEL% NEQ 0 (
 
 :: 2. WebUI Unit Tests
 echo.
-echo [3/3] Running WebUI Vitest Suite (44 Tests)...
+echo [3/3] Running WebUI Vitest Suite (56 Tests)...
 call npm test -- --run
 if %ERRORLEVEL% NEQ 0 (
     echo [ERROR] WebUI test suite failed!

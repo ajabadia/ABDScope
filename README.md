@@ -50,11 +50,16 @@ ABDScope/
 │   ├── StandaloneDemo/           # Native Standalone GUI Application Demo
 │   └── tests/                    # C++ Standalone Sanity Smoke Test
 ├── WebUI/                        # Modern WebUI Frontend (ES Modules)
+│   ├── index.html                # Production embedded scope host page
 │   ├── src/                      # Core JS engine, inputs, mounts, and renderers
-│   │   ├── mount/                # EmbeddedMount, FloatingMount, LaneController
+│   │   ├── scope.js              # Factory / orchestrator (createScope)
+│   │   ├── frame.js              # ScopeDataFrame normalization & metrics
+│   │   ├── trigger.js            # Sub-sample pitch lock & adaptive hysteresis
+│   │   ├── scope.css             # Theme tokens (CSS custom properties only)
+│   │   ├── mount/                # MountBase + Mounts, LaneController/LaneView, layout & DOM helpers
 │   │   ├── renderers/            # Oscilloscope, Spectrum, Lissajous, Phase, Spectrogram, VU
 │   │   ├── input/                # AnalyserInput (WebAudio) & PushInput (Bridge)
-│   │   └── trigger.js            # Sub-sample pitch lock & adaptive hysteresis
+│   │   └── utils/                # exportImage (PNG clipboard/download)
 │   ├── demo/                     # Standalone interactive test harness & signal generator
 │   └── tests/                    # Vitest unit test suite (56 tests)
 ├── docs/                         # Integration guides, data contracts, and usage manuals
@@ -72,12 +77,14 @@ ABDScope/
 build.bat
 ```
 
-### 2. Standalone Web Demo
+### 2. Standalone Web Demo (WebUI/demo)
 ```cmd
 cd WebUI
 npm run demo
 ```
-Open `http://localhost:8080/demo/index.html` in any browser.
+Open `http://localhost:8080/demo/` in any browser. The demo lives in `WebUI/demo/` and must never be bundled into `juce_add_binary_data` — see `docs/INTEGRATION_GUIDE.md` §7.
+
+> `start.bat` is an alternative launcher that serves the whole `WebUI/` folder (with the embedded `index.html` and `/demo/`) on port 8391.
 
 ---
 

@@ -2,6 +2,7 @@
 
 #include <cstddef>
 #include <cmath>
+#include <string>
 #include <string_view>
 #include <array>
 #include <algorithm>
@@ -12,21 +13,29 @@ struct TriggerResult {
     size_t triggerIndex { 0 };
     float triggerFraction { 0.0f };
     float estimatedFrequencyHz { 0.0f };
-    std::string_view noteName { "" };
+    std::string noteName;
 };
 
 /**
  * Pure C++ Zero-Crossing Detector with Adaptive Hysteresis, Sub-Bass Tracking (< 140 Hz) & Sub-Sample Lock.
+ *
+ * NOTE: process() builds a std::string note name and must run off the audio thread
+ * (message / UI thread only).
  */
 class TriggerDetector final {
 public:
-    static constexpr float DEFAULT_HYSTERESIS = 0.035f;
+    /**
+     * Hysteresis in normalized amplitude. Pass <= 0 (default) to enable peak-scaled
+     * adaptive hysteresis: clamp(peak * 0.12, 0.005, 0.15). Pass a positive value to
+     * force a fixed threshold.
+     */
+    static constexpr float AUTO_HYSTERESIS = 0.0f;
 
     static TriggerResult process(
         const float* samples,
         size_t numSamples,
         float sampleRate,
-        float hysteresis = DEFAULT_HYSTERESIS) noexcept
+        float hysteresis = AUTO_HYSTERESIS)
     {
         TriggerResult result;
         if (samples == nullptr || numSamples < 16) return result;
@@ -41,8 +50,8 @@ public:
 
         if (peak < 0.005f) return result; // Silence
 
-        const float effectiveHysteresis = (hysteresis > 0.0f) 
-            ? hysteresis 
+        const float effectiveHysteresis = (hysteresis > 0.0f)
+            ? hysteresis
             : std::clamp(peak * 0.12f, 0.005f, 0.15f);
 
         bool isArmed = false;
@@ -100,8 +109,13 @@ public:
         return result;
     }
 
-    static std::string_view frequencyToNoteName(float freqHz) noexcept {
-        if (freqHz < 18.0f || freqHz > 20000.0f) return "";
+    /**
+     * Convert frequency to a MIDI note name with octave (e.g. 440 Hz -> "A4", 55 Hz -> "A1").
+     * Returns an empty string when out of range.
+     */
+    static std::string frequencyToNoteName(float freqHz)
+    {
+        if (freqHz < 16.0f || freqHz > 20000.0f) return "";
 
         static constexpr std::array<std::string_view, 12> NOTE_NAMES = {
             "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"
@@ -111,8 +125,9 @@ public:
         const int roundedMidi = static_cast<int>(std::round(midiNum));
         if (roundedMidi < 0 || roundedMidi > 127) return "";
 
-        const size_t noteIdx = static_cast<size_t>(roundedMidi % 12);
-        return NOTE_NAMES[noteIdx];
+        const size_t noteIdx = static_cast<size_t>(((roundedMidi % 12) + 12) % 12);
+        const int octave = (roundedMidi / 12) - 1;
+        return std::string(NOTE_NAMES[noteIdx]) + std::to_string(octave);
     }
 };
 

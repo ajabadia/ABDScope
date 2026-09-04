@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ABDScope â€” Studio Audio Visualizer</title>
-  <link rel="stylesheet" href="../../WebUI/src/scope.css">
+  <title>ABDScope — Studio Audio Visualizer</title>
+  <link rel="stylesheet" href="../src/scope.css">
   <link rel="stylesheet" href="demo.css">
 </head>
 <body data-theme="ms2000">
@@ -63,7 +63,7 @@
       </div>
 
       <div class="control-group">
-        <div class="control-label"><span>Stereo Phase / Spread</span><span id="val-phase">0Â° (Mono)</span></div>
+        <div class="control-label"><span>Stereo Phase / Spread</span><span id="val-phase">0° (Mono)</span></div>
         <input type="range" id="slider-phase" min="0" max="180" step="1" value="0">
       </div>
 
@@ -88,7 +88,7 @@
   </main>
 
   <script type="module">
-    import { createScope } from '../../WebUI/src/scope.js';
+    import { createScope } from '../src/scope.js';
     import { TestSignalGenerator } from './test-signals.js';
 
     const sigGen = new TestSignalGenerator();
@@ -212,7 +212,7 @@
     const sPhase = document.getElementById('slider-phase');
     sPhase.oninput = (e) => {
       const deg = parseFloat(e.target.value);
-      let label = `${deg}Â°`;
+      let label = `${deg}°`;
       if (deg === 0) label += ' (Mono)';
       else if (deg === 90) label += ' (Wide Stereo)';
       else if (deg === 180) label += ' (Anti-Phase)';

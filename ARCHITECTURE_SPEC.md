@@ -408,9 +408,10 @@ scope.destroy(); // Limpia TODO: renderers, DOM, observers, animaciones
 
 ```cpp
 // En prepareToPlay del sintetizador / anfitrión:
-scopeCollector.registerTap(0, "Master Output",         ScopeTapType::StereoAudio);
-scopeCollector.registerTap(1, "Pre-Filter (Mixer)",    ScopeTapType::MonoAudio);
-scopeCollector.registerTap(2, "LFO 1 / Env 1 (CV)",   ScopeTapType::ControlSignal);
+// registerTap(name, type, capacity, [wireId]) — wireId (slug) debe coincidir con availableTaps[].id del WebUI.
+scopeCollector.registerTap("Master Output",       ScopeTapType::StereoAudio, 4096, "master");
+scopeCollector.registerTap("Pre-Filter (Mixer)", ScopeTapType::MonoAudio, 4096, "pre_filter");
+scopeCollector.registerTap("LFO 1 / Env 1 (CV)", ScopeTapType::ControlSignal, 4096, "lfo1");
 
 // En processBlock (Audio Thread):
 void SynthAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer&)
@@ -441,12 +442,13 @@ ABDScope/
 │   ├── Core/
 │   │   ├── ScopeTap.h                  # Tap lock-free con selector atómico
 │   │   ├── ScopeDataCollector.h        # Gestor multi-tap y buffers circulares SPSC
+│   │   ├── TapId.h                     # Slugs deterministas (makeSlug) del wire id
 │   │   ├── ScopeFrameSerializer.h      # Serialización de frame a JSON para bridge
-│   │   ├── TriggerDetector.h           # Algoritmo de cruce por cero y estabilización
-│   │   └── SpectrumProcessor.h         # Cálculo FFT Hann/Blackman-Harris
+│   │   └── TriggerDetector.h           # Algoritmo de cruce por cero y estabilización
 │   ├── JUCE/
 │   │   ├── JuceScopeComponent.h        # Componente nativo JUCE para ABDAudioLab
-│   │   └── JuceSpectrumComponent.h     # Analizador de espectro JUCE nativo
+│   │   ├── JuceWebScopeComponent.h     # Componente WebView2 plug-and-play multi-tap
+│   │   └── ScopeResourceProvider.(h|cpp)  # Recursos Web embebidos (MIME estricto)
 │   └── CMakeLists.txt                  # Target ABDScope::ABDScopeCore
 ├── WebUI/                        # Capa Web (Canvas 2D / WebGL)
 │   ├── src/
@@ -464,8 +466,12 @@ ABDScope/
 │   │   │   ├── PhaseMeterRenderer.js
 │   │   │   └── VuMeterRenderer.js      # Barras VU compañeras
 │   │   ├── mount/
+│   │   │   ├── MountBase.js            # Orquestación multi-lane compartida
 │   │   │   ├── EmbeddedMount.js        # Montaje como panel integrado
-│   │   │   └── FloatingMount.js        # Montaje como modal flotante arrastrable
+│   │   │   ├── FloatingMount.js        # Montaje como modal flotante arrastrable
+│   │   │   ├── LaneController.js       # Lógica de cada carril (renderers, freeze)
+│   │   │   ├── LaneView.js             # DOM de cada carril
+│   │   │   └── mountLayout/mountDom.js # Helpers puros de grid y DOM
 │   │   └── scope.css                   # Theming dinámico mediante CSS Custom Properties
 │   ├── demo/
 │   │   ├── index.html                  # Banco de pruebas interactivo

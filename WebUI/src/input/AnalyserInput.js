@@ -119,11 +119,14 @@ export class AnalyserInput {
 
   /**
    * Explicit lifecycle cleanup to prevent memory leaks.
+   * Releases every real reference owned by this adapter.
    */
   destroy() {
     this.stop();
-    this.analyser = null;
-    this.timeBuffer = null;
+    this.analyserL = null;
+    this.analyserR = null;
+    this.timeBufferL = null;
+    this.timeBufferR = null;
     this.freqBuffer = null;
     this.onFrameCallback = null;
   }

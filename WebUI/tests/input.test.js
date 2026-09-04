@@ -72,9 +72,15 @@ describe('Input Adapters: AnalyserInput', () => {
   it('should stop sampling loop and clean references on destroy()', () => {
     const mockNode = createMockAnalyserNode();
     const input = new AnalyserInput(mockNode);
+    expect(input.analyserL).toBeDefined();
 
     input.destroy();
     expect(input.isRunning).toBe(false);
-    expect(input.analyser).toBeNull();
+    expect(input.analyserL).toBeNull();
+    expect(input.analyserR).toBeNull();
+    expect(input.timeBufferL).toBeNull();
+    expect(input.timeBufferR).toBeNull();
+    expect(input.freqBuffer).toBeNull();
+    expect(input.onFrameCallback).toBeNull();
   });
 });

@@ -8,20 +8,18 @@
 #include <algorithm>
 #include "ScopeTap.h"
 #include "TriggerDetector.h"
+#include "TapId.h"
 
 namespace abd::scope {
 
-inline std::string getTapSlug(const ScopeTap* tap) noexcept {
+/**
+ * Wire-protocol slug for a tap: explicit registered id wins, otherwise a
+ * deterministic snake_case slug is derived from the display name.
+ */
+inline std::string getTapSlug(const ScopeTap* tap) {
     if (tap == nullptr) return "";
-    std::string name = tap->getName();
-    std::string lower;
-    lower.reserve(name.size());
-    for (char c : name) lower.push_back(static_cast<char>(std::tolower(static_cast<unsigned char>(c))));
-
-    if (lower.find("hardware") != std::string::npos) return "hardware_in";
-    if (lower.find("diag") != std::string::npos)     return "diag_tone";
-    if (lower.find("stimulus") != std::string::npos) return "stimulus";
-    return lower;
+    if (!tap->getId().empty()) return tap->getId();
+    return makeSlug(tap->getName());
 }
 
 /**
@@ -34,8 +32,8 @@ public:
         : m_targetSamples(targetSamples),
           m_tempL(targetSamples * 4, 0.0f),
           m_tempR(targetSamples * 4, 0.0f),
-          m_decimatedL(targetSamples, 0.0f),
-          m_decimatedR(targetSamples, 0.0f)
+          m_frameL(targetSamples, 0.0f),
+          m_frameR(targetSamples, 0.0f)
     {
     }
 
@@ -55,8 +53,9 @@ public:
         const size_t readCount = std::min(available, m_tempL.size());
         activeTap->read(m_tempL.data(), isStereo ? m_tempR.data() : nullptr, readCount);
 
-        // 2. For audio signals, extract the latest consecutive block of m_targetSamples (1:1 audio rate)
-        // Taking the contiguous tail avoids fractional sample stepping that causes waveform jitter and frequency warping
+        // 2. Extract the latest contiguous block of m_targetSamples (1:1 audio rate)
+        // Taking the contiguous tail avoids fractional sample stepping that causes
+        // waveform jitter and frequency warping.
         const size_t offset = (readCount > m_targetSamples) ? (readCount - m_targetSamples) : 0;
         const size_t count = std::min(readCount, m_targetSamples);
 
@@ -66,13 +65,13 @@ public:
         for (size_t i = 0; i < m_targetSamples; ++i) {
             const size_t srcIdx = (i < count) ? (offset + i) : (count > 0 ? count - 1 : 0);
             const float sL = m_tempL[srcIdx];
-            m_decimatedL[i] = sL;
+            m_frameL[i] = sL;
             sumSqL += sL * sL;
             peakL = std::max(peakL, std::abs(sL));
 
             if (isStereo) {
                 const float sR = m_tempR[srcIdx];
-                m_decimatedR[i] = sR;
+                m_frameR[i] = sR;
                 sumSqR += sR * sR;
                 peakR = std::max(peakR, std::abs(sR));
             }
@@ -85,7 +84,7 @@ public:
         const bool isControl = (activeTap->getType() == ScopeTapType::ControlSignal);
         TriggerResult trigger;
         if (!isControl) {
-            trigger = TriggerDetector::process(m_decimatedL.data(), m_targetSamples, sampleRate);
+            trigger = TriggerDetector::process(m_frameL.data(), m_targetSamples, sampleRate);
         }
 
         // 4. Construct Wire Protocol JSON
@@ -105,7 +104,7 @@ public:
 
         for (size_t i = 0; i < m_targetSamples; ++i) {
             if (i > 0) json << ",";
-            json << m_decimatedL[i];
+            json << m_frameL[i];
         }
         json << "]";
 
@@ -113,7 +112,7 @@ public:
             json << ",\"timeDataR\":[";
             for (size_t i = 0; i < m_targetSamples; ++i) {
                 if (i > 0) json << ",";
-                json << m_decimatedR[i];
+                json << m_frameR[i];
             }
             json << "]";
         }
@@ -126,8 +125,8 @@ private:
     size_t m_targetSamples;
     std::vector<float> m_tempL;
     std::vector<float> m_tempR;
-    std::vector<float> m_decimatedL;
-    std::vector<float> m_decimatedR;
+    std::vector<float> m_frameL;
+    std::vector<float> m_frameR;
 };
 
 } // namespace abd::scope

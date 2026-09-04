@@ -1,6 +1,6 @@
 {
   "name": "@abdsynths/scope",
-  "version": "0.1.0-alpha",
+  "version": "0.3.1",
   "description": "Universal, lock-free, zero-copy audio oscilloscope and spectrum analyzer for ABDSynths plugins & standalone tools",
   "type": "module",
   "main": "WebUI/src/scope.js",

@@ -12,7 +12,8 @@
       width: 100%;
       height: 100%;
       overflow: hidden;
-      background: #06120a;
+      background: var(--scope-bg, #06120a);
+      color: var(--scope-text-main, #e8f4fc);
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
       user-select: none;
     }
@@ -63,7 +64,7 @@
         const frameData = typeof frameJson === 'string' ? JSON.parse(frameJson) : frameJson;
         scope.pushFrame(frameData);
       } catch (err) {
-        console.error('[ABDScope IPC Error]', err);
+        if (window.__ABDSCOPE_DEBUG__) console.error('[ABDScope IPC Error]', err);
       }
     };
 

@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.3.1] - 2026-09-04
+
+### Fixed
+- **C++ smoke test was inert in Release**: `StandaloneSmoke.cpp` relied on `assert()`, which `NDEBUG` strips from Release builds, and asserted stale JSON keys (`time`, `samplesL`) that `ScopeFrameSerializer` never emits. Rewritten with explicit runtime checks against the real wire contract (`timeDataL`, `numSamples`, `tapId`, ...); the build now fails when the contract breaks, in both Debug and Release.
+- **`AnalyserInput.destroy()` cleanup** now releases the real references (`analyserL`/`analyserR`, `timeBufferL`/`timeBufferR`, `freqBuffer`) instead of properties that never existed.
+
+### Changed
+- **Deterministic tap wire ids**: `ScopeTap` / `ScopeDataCollector::registerTap` accept an optional stable `id` (slug). The serializer emits the explicit id, or a deterministic snake_case slug derived from the display name (`makeSlug`). `selectTap()` / `findTapIndex()` resolve explicit id -> display name / derived slug -> lenient substring. WebUI `availableTaps[].id` must match the C++ id (see `docs/INTEGRATION_GUIDE.md` §10.1).
+- **`detectedNoteName` now includes the octave** (e.g. `"A4"`, `"B5"`), matching the JS trigger engine and `docs/DATA_CONTRACT.md`.
+- **`TriggerDetector` defaults to peak-scaled adaptive hysteresis** (`AUTO_HYSTERESIS`), as documented for sub-bass tracking.
+- **`JuceWebScopeComponent` on-demand tap activation**: lane subscriptions (`SET_ACTIVE_TAP { tapId, laneIdx }`) activate only the taps referenced by lanes; an all-active fallback is kept until the first subscription arrives (see class docs).
+- **WebUI demo relocated** from `examples/browser_sandbox` to `WebUI/demo` so all guides and launch scripts agree; `npm run demo` serves it on port 8080.
+- **Version alignment** across CMake, package.json and docs set to 0.3.1.
+
+---
+
 ## [0.3.0] - 2026-09-03
 
 ### Added

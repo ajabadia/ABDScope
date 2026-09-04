@@ -1,6 +1,6 @@
 {
   "name": "@abdsynths/scope",
-  "version": "0.1.0-alpha",
+  "version": "0.3.1",
   "description": "Universal lock-free audio visualizer and analysis engine for ABDSynths suite",
   "type": "module",
   "main": "./src/scope.js",
@@ -16,13 +16,18 @@
     "./renderers/PhaseMeterRenderer": "./src/renderers/PhaseMeterRenderer.js",
     "./renderers/VuMeterRenderer": "./src/renderers/VuMeterRenderer.js",
     "./renderers/SpectrogramRenderer": "./src/renderers/SpectrogramRenderer.js",
+    "./renderers/BaseRenderer": "./src/renderers/BaseRenderer.js",
+    "./mount/EmbeddedMount": "./src/mount/EmbeddedMount.js",
+    "./mount/FloatingMount": "./src/mount/FloatingMount.js",
+    "./mount/MountBase": "./src/mount/MountBase.js",
+    "./mount/LaneController": "./src/mount/LaneController.js",
     "./utils/exportImage": "./src/utils/exportImage.js"
   },
   "scripts": {
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "demo": "npx serve demo"
+    "demo": "npx serve . -l 8080"
   },
   "keywords": [
     "audio",

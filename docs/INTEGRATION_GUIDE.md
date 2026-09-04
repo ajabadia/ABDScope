@@ -32,6 +32,8 @@ target_link_libraries(ABDMS2000 PRIVATE
 )
 ```
 
+`ABDScopeCore` exports both `Source/Core` and `Source/JUCE` as include directories, so `#include <Core/ScopeTap.h>` and `#include <JUCE/JuceWebScopeComponent.h>` resolve directly.
+
 ---
 
 ## 3. Native JUCE Integration (`JuceWebScopeComponent`)
@@ -68,8 +70,8 @@ private:
 ```
 
 ### Key Capabilities of `JuceWebScopeComponent`:
-1. **Multi-Tap Concurrency**: Dynamically tracks tap assignments across all active lanes (`laneIdx`), keeping only necessary taps active in the audio thread.
-2. **Multi-Tap Frame Bundling**: Automatically serializes active probes into `{ "taps": { [tapId]: frame } }` when multiple lanes observe distinct signals simultaneously.
+1. **On-Demand Multi-Tap Activation**: The WebUI announces per-lane probe subscriptions via `{ type: 'SET_ACTIVE_TAP', tapId, laneIdx }`. Once the first subscription arrives, the component activates **only the taps referenced by at least one lane**, so unobserved probes cost ~0 CPU in the audio thread. Before the first subscription the component keeps all registered taps active (all-active fallback) so lanes render out of the box.
+2. **Multi-Tap Frame Bundling**: Automatically serializes every currently active probe into `{ "taps": { [tapId]: frame } }` so independent lanes can run live simultaneously without cross-talk or stalling.
 3. **Embedded Binary Resource Provider**: Zero external web server or node process required; assets are served natively from memory using JUCE binary data.
 
 ---
@@ -112,14 +114,15 @@ private:
 ```cpp
 MySynthAudioProcessor::MySynthAudioProcessor()
 {
-    // Register probes (inactive by default, 0 CPU cost)
-    tapMaster = scopeCollector.registerTap(1, "Master Output", abd::scope::ScopeTapType::MasterOutput);
-    tapVoice1 = scopeCollector.registerTap(2, "Osc 1 (DWGS)",  abd::scope::ScopeTapType::Voice1);
-    tapFilter = scopeCollector.registerTap(3, "Filter Out",    abd::scope::ScopeTapType::FilterOut);
-    tapLfo1   = scopeCollector.registerTap(4, "LFO 1 (CV)",    abd::scope::ScopeTapType::Lfo1);
+    // Register probes (inactive by default, 0 CPU cost until subscribed by a lane).
+    // The 4th argument is the stable wire id (slug) the WebUI must use in `availableTaps`.
+    tapMaster = scopeCollector.registerTap("Master Output",  abd::scope::ScopeTapType::StereoAudio, 4096, "master");
+    tapVoice1 = scopeCollector.registerTap("Osc 1 (DWGS)",   abd::scope::ScopeTapType::StereoAudio, 4096, "osc1");
+    tapFilter = scopeCollector.registerTap("Filter Out",     abd::scope::ScopeTapType::StereoAudio, 4096, "filter");
+    tapLfo1   = scopeCollector.registerTap("LFO 1 (CV)",     abd::scope::ScopeTapType::ControlSignal, 4096, "lfo1");
 
-    // Set default active tap
-    scopeCollector.setActiveTap(1);
+    // Set default active tap (used by standalone single-tap serialization)
+    scopeCollector.selectTap("master");
 
     // Start 30 FPS telemetry decimation pump on the message thread
     startTimerHz(30);
@@ -147,13 +150,13 @@ void MySynthAudioProcessor::timerCallback()
 
 void MySynthAudioProcessor::handleWebUiMessage(const juce::var& message)
 {
+    // Single-tap hosts: resolve any id / display name directly.
+    // JuceWebScopeComponent handles multi-lane per-lane subscriptions internally.
     if (message["type"].toString() == "SET_ACTIVE_TAP")
     {
-        auto tapId = message["tapId"].toString();
-        if (tapId == "master") scopeCollector.setActiveTap(1);
-        else if (tapId == "osc1") scopeCollector.setActiveTap(2);
-        else if (tapId == "filter") scopeCollector.setActiveTap(3);
-        else if (tapId == "lfo1") scopeCollector.setActiveTap(4);
+        const juce::String tapId = message["tapId"].toString();
+        if (tapId.isNotEmpty())
+            scopeCollector.selectTap(tapId.toStdString());
     }
 }
 ```
@@ -179,6 +182,8 @@ void MySynthAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce:
     );
 }
 ```
+
+> **Zero-overhead guarantee:** `ScopeTap::writeStereo()` performs a single relaxed atomic load when the tap is inactive and returns immediately — no copy, no allocation. Only taps subscribed by a visual lane are marked active.
 
 ---
 
@@ -254,6 +259,8 @@ export function createScopeModal() {
   return modalScope;
 }
 ```
+
+> **Tip:** The `onTapChange` callback also fires once per lane right after the scope mounts (and after layout changes), so the C++ side learns the initial lane subscriptions without any extra handshake code.
 
 ---
 
@@ -461,7 +468,7 @@ target_link_libraries(MyPlugin PRIVATE ABDScope::ABDScopeCore)
 ## 10. Tap Routing Contracts & Wire Protocol Best Practices
 
 ### 10.1. Tap ID vs. Display Name Resolution
-- **WebUI Contract**: In `availableTaps`, each probe defines a machine slug `id` and a human-readable `name`:
+- **WebUI Contract**: In `availableTaps`, each probe defines a machine slug `id` and a human-readable `name`. The `id` **must match** the stable wire id the C++ side registered for that tap (the 4th argument of `registerTap`); if the C++ tap registered no explicit id, the derived snake_case slug of its display name is used instead (see `makeSlug`):
   ```javascript
   availableTaps: [
     { id: 'hardware_in', name: 'Hardware In (DUT)' },
@@ -469,8 +476,12 @@ target_link_libraries(MyPlugin PRIVATE ABDScope::ABDScopeCore)
     { id: 'osc1',        name: 'Oscillator 1 (DWGS)' }
   ]
   ```
+  ```cpp
+  // Matching C++ registration
+  tapHardwareIn = scopeCollector.registerTap("Hardware In (DUT)", abd::scope::ScopeTapType::StereoAudio, 4096, "hardware_in");
+  ```
   When the user changes taps, the frontend posts `{ type: 'SET_ACTIVE_TAP', tapId, laneIdx }`.
-- **C++ Resolution**: `JuceWebScopeComponent` and `ScopeDataCollector` support automatic alias and fuzzy matching. Whether the frontend sends `'hardware_in'` or `'Hardware In (DUT)'`, `selectTap()` resolves to the correct probe.
+- **C++ Resolution**: `ScopeDataCollector::selectTap()` / `findTapIndex()` resolve in this order: explicit registered id equality -> case-insensitive display name / derived slug equality -> lenient substring fallback. Whether the frontend sends `'hardware_in'` or `'Hardware In (DUT)'`, `selectTap()` resolves to the correct probe.
 
 ### 10.2. JSON Wire Protocol & Typed Array Normalization
 - When C++ transmits frames over WebView2 IPC (`window.__pushScopeFrame`), the numeric sample buffers `timeDataL` and `timeDataR` arrive as native JavaScript `Array` instances from `JSON.parse`.

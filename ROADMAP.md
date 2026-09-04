@@ -157,8 +157,8 @@
   - Serialización de `ScopeDataFrame` a JSON para envío por JUCE WebView bridge.
   - Submuestreo temporal a ~512 muestras por frame a 30 Hz.
 
-- [x] **4.3 `TriggerDetector.h` & `SpectrumProcessor.h` (C++):**
-  - Implementación del cruce por cero con histéresis y estimador de nota en C++.
+- [x] **4.3 `TriggerDetector.h` (C++):**
+  - Implementación del cruce por cero con histéresis (adaptativa por defecto), estimador de nota MIDI con octava (p. ej. "A4") y slug determinista del tap (`TapId.h`) en C++.
 
 - [x] **4.4 `JuceScopeComponent.h`:**
   - Componente gráfico nativo `juce::Component` para aplicaciones puramente C++ (reemplazo en ABDAudioLab).
@@ -200,7 +200,7 @@
 - [ ] **6.3 Modos de Visualización 3D / Isometric Waterfall:**
   - Descartado (Spectrogram 2D continuo con mapa de calor plasma/inferno ofrece máxima claridad métrica y rendimiento).
 - [x] **6.4 Refinamiento de Trigger en Sub-graves (< 140 Hz):**
-  - Histéresis adaptativa escalada a amplitud de pico y ventana de búsqueda extendida (4096 muestras) para estabilización perfecta en notas de bajo profundo (20 Hz a 60 Hz).
+  - Histéresis adaptativa escalada a amplitud de pico (por defecto en C++ y JS) y ventana de búsqueda extendida (4096 muestras) para estabilización perfecta en notas de bajo profundo (20 Hz a 60 Hz).
 
 ---
 

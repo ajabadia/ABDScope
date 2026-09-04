@@ -1,7 +1,8 @@
 ﻿# ABDScope Data Contract & Wire Protocol
 
-> **Version:** 1.1.0  
-> **Target:** C++ DSP Engine ↔ WebUI IPC Bridge / WASM
+> **Version:** 1.2.0  
+> **Target:** C++ DSP Engine ↔ WebUI IPC Bridge / WASM  
+> **v1.2.0 changes:** deterministic `tapId` slugs (explicit id or derived snake_case) and octave-qualified `detectedNoteName` from the C++ side (parity with the JS trigger engine).
 
 ---
 
@@ -14,7 +15,7 @@ interface ScopeDataFrame {
   /** Signal domain type ('audio' for bipolar PCM, 'control' for unipolar/bipolar CV) */
   signalType: 'audio' | 'control';
 
-  /** Normalized slug identifier of the telemetry tap emitting this frame (e.g. 'hardware_in', 'diag_tone') */
+  /** Stable wire slug of the telemetry tap emitting this frame: the explicit id passed to registerTap(..., id), or the snake_case slug derived from its display name (e.g. 'hardware_in', 'diag_tone', 'master_out'). */
   tapId?: string;
 
   /** Left / Mono time domain PCM samples (-1.0 to +1.0) */
@@ -38,7 +39,7 @@ interface ScopeDataFrame {
   /** Fundamental frequency detected in Hz (0 if undetected or control signal) */
   estimatedFrequencyHz: number;
 
-  /** Nearest musical note name (e.g. 'A4', 'C#3', 'B5') */
+  /** Nearest musical note name with octave, e.g. 'A4', 'C#3', 'B5'. Empty string when undetected or control signal. */
   detectedNoteName: string;
 
   /** Logarithmic or linear FFT magnitudes in dB (-96.0 to 0.0 dB). Null if not computed. */
@@ -59,6 +60,8 @@ interface ScopeDataFrame {
   phaseCorrelation: number;
 }
 ```
+
+> **Tap id resolution:** `tapId` is the explicit slug registered on the C++ tap (`ScopeDataCollector::registerTap(name, type, capacity, id)`). If the C++ tap registers no explicit id, the serializer derives a deterministic snake_case slug from the display name via `makeSlug()` (e.g. `"Master Out"` → `"master_out"`). `ScopeDataCollector::selectTap()` / `findTapIndex()` accept the id slug, the case-insensitive display name, or a lenient substring, so hosts never need exact-case lookups. WebUI `availableTaps[].id` must match the C++ id.
 
 ---
 

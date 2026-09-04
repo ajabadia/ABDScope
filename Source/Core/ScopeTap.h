@@ -1,7 +1,9 @@
 #pragma once
 
+#include <atomic>
+#include <cstddef>
 #include <string>
-#include <memory>
+#include <utility>
 #include "ScopeTapType.h"
 #include "SpscRingBuffer.h"
 
@@ -16,8 +18,9 @@ namespace abd::scope {
  */
 class ScopeTap final {
 public:
-    ScopeTap(std::string name, ScopeTapType type, size_t bufferCapacity = 4096)
+    ScopeTap(std::string name, ScopeTapType type, size_t bufferCapacity = 4096, std::string id = {})
         : m_name(std::move(name)),
+          m_id(std::move(id)),
           m_type(type),
           m_bufferL(bufferCapacity),
           m_bufferR(type == ScopeTapType::StereoAudio ? bufferCapacity : 0)
@@ -29,6 +32,15 @@ public:
     ScopeTap& operator=(const ScopeTap&) = delete;
 
     [[nodiscard]] const std::string& getName() const noexcept { return m_name; }
+
+    /**
+     * Stable wire-protocol identifier (slug). If empty, the serializer derives a
+     * deterministic slug from the display name via makeSlug().
+     */
+    [[nodiscard]] const std::string& getId() const noexcept { return m_id; }
+
+    void setId(std::string id) noexcept { m_id = std::move(id); }
+
     [[nodiscard]] ScopeTapType getType() const noexcept { return m_type; }
 
     [[nodiscard]] bool isActive() const noexcept {
@@ -81,6 +93,7 @@ public:
 
 private:
     std::string m_name;
+    std::string m_id;
     ScopeTapType m_type;
     alignas(64) std::atomic<bool> m_isActive { false };
     SpscRingBuffer<float> m_bufferL;

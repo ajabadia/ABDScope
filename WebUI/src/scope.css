@@ -1,4 +1,4 @@
-/**
+﻿/**
  * ABDScope Unified Styling System
  * ================================
  * Pure Vanilla CSS with cascading token fallbacks from host themes.
@@ -72,6 +72,25 @@
   --scope-trace-r: #00c3ff;
   --scope-spectrum: #00e676;
   --scope-border: rgba(0, 230, 118, 0.3);
+}
+
+[data-theme="audiolab-light"],
+[data-theme="light"],
+.theme-audiolab-light {
+  --scope-bg: #f8f9fa;
+  --scope-surface: #ffffff;
+  --scope-surface-elevated: #f1f3f5;
+  --scope-accent: #00a86b;
+  --scope-accent-hover: #008f5a;
+  --scope-trace-l: #00a86b;
+  --scope-trace-r: #0284c7;
+  --scope-spectrum: #00a86b;
+  --scope-grid: rgba(15, 23, 42, 0.08);
+  --scope-grid-center: rgba(15, 23, 42, 0.16);
+  --scope-border: #e2e8f0;
+  --scope-border-strong: #cbd5e1;
+  --scope-text-main: #1a1d20;
+  --scope-text-muted: #6c757d;
 }
 
 /* ─── Global Theme-Aware Scrollbars ─── */

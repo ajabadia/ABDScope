@@ -1,8 +1,8 @@
 # ABDScope — Developer Context & Handoff Document
 
-> **Last Updated:** September 2, 2026  
-> **Current Version:** 0.2.0-beta  
-> **Status:** Phase 1 through Phase 4, Phase 6.1 & Phase 6.4 completed with 100% test passing (56/56 tests) and C++ MSVC smoke verification.
+> **Last Updated:** September 4, 2026
+> **Current Version:** 0.3.1
+> **Status:** Phases 1–4, 6.1 & 6.4 completed with 100% JS tests passing (56/56) and a C++ smoke verification that runs real checks in both Debug and Release builds (see `Source/tests/StandaloneSmoke.cpp`).
 
 ---
 
@@ -13,15 +13,15 @@
 ### Core Capabilities:
 1. **DRY & Zero-Copy**: Reusable via NTFS Junctions (`mklink /J`) for WebUI and CMake `add_subdirectory` for C++.
 2. **Multi-Lane Responsive 2-Column Grid**: Stacked independent visual channels with auto-expansion for solitary lanes, intelligent non-duplicated mode and tap selection, manual column width toggles (`[ ½ ]` / `[ 1 ]`), per-lane Freeze (A/B reference comparison), and per-lane Snapshot.
-3. **Sub-Bass Pitch Lock**: Peak-adaptive hysteresis and 4096-sample window for jitter-free trigger stabilization on deep sub-bass (< 140 Hz down to 20 Hz).
+3. **Sub-Bass Pitch Lock**: Peak-adaptive hysteresis and 4096-sample window for jitter-free trigger stabilization on deep sub-bass (< 140 Hz down to 20 Hz). C++ `TriggerDetector` defaults to peak-scaled hysteresis and returns octave-qualified note names (`A4`, `B5`) aligned with the JS engine.
 4. **Dual-Input Pipeline**: Support both native Web Audio `AnalyserNode` (standalone web/WASM) and streaming `pushFrame()` (C++ VST3 IPC bridge).
-5. **Lock-Free Multi-Tap**: In C++, inactive taps have zero CPU/memory overhead (`isTapActive`).
+5. **Lock-Free Multi-Tap**: In C++, inactive taps have zero CPU/memory overhead (`isTapActive`). `JuceWebScopeComponent` activates only lane-subscribed taps (all-active fallback until the first `SET_ACTIVE_TAP` message).
 
 ---
 
 ## 2. Key Architecture Standards
 
-- **File Size Constraint**: Maximum 200 lines for JS files, 300 lines for C++ files.
+- **File Size Constraint**: Maximum 200 lines of code for JS files (excluding comments/blanks), 300 lines for C++ files.
 - **Single Responsibility Principle**: One file = one concern. Avoid bloated single-file monolithic traps.
 - **Language**: 100% English for code, schemas, and comments.
 - **Styling**: CSS Custom Properties only (`--scope-bg`, `--color-accent`, etc.).
@@ -36,19 +36,19 @@
 - [x] **Phase 3 (Advanced Modes & Theming)**: Lissajous 45° Vectorscope, Phase Correlation Meter, Spectrogram Waterfall, Frame Capture to Clipboard/PNG, Theme Presets.
 - [x] **Phase 4 (C++ Core & JUCE Lock-Free Multi-Tap)**:
   - `Source/Core/SpscRingBuffer.h`, `ScopeTap.h` & `ScopeDataCollector.h`.
-  - `Source/Core/ScopeFrameSerializer.h`.
-  - `Source/Core/TriggerDetector.h`.
-  - `Source/JUCE/JuceScopeComponent.h`.
-  - `Source/StandaloneDemo/Main.cpp` (`ABDScope Native GUI Demo.exe`).
+  - `Source/Core/ScopeFrameSerializer.h`, `Source/Core/TriggerDetector.h`, `Source/Core/TapId.h`.
+  - `Source/JUCE/JuceScopeComponent.h` & `Source/JUCE/JuceWebScopeComponent.h`.
+  - `Source/StandaloneDemo/Main.cpp` (`ABDScope Native GUI Demo`).
 - [x] **Phase 6.1 (Multi-Lane Responsive 2-Column Grid & Per-Lane Controls)**:
-  - `LaneController` with independent canvas, mode buttons group, probe dropdown, colSpan width toggle, per-lane Freeze, and Snapshot.
-  - Auto-expansion for solitary 1-column lanes (`colSpan = 2`).
-  - Intelligent non-duplicated mode and tap picking on newly added lanes.
-  - Responsive CSS Grid (`span 1` / `span 2`) with container query fallback on narrow viewports.
-  - Dynamic `maxLanes` configuration (default: 1, demo: 4).
-  - Vertical scrolling with `minLaneHeight: 130px`.
+  - Shared `MountBase` drives `EmbeddedMount` & `FloatingMount` (deduplicated grid/rebuild/resize logic); `LaneController` renders independent canvases, mode buttons, probe dropdown, colSpan toggle, Freeze and Snapshot.
+  - Auto-expansion for solitary 1-column lanes; intelligent non-duplicated mode/tap picking; responsive CSS Grid with container-query fallback; configurable `maxLanes`; vertical scrolling with `minLaneHeight`.
 - [x] **Phase 6.4 (Sub-Bass Pitch Lock & Extended Trigger Window)**:
-  - Peak-adaptive hysteresis in JS and C++20 with 4096-sample analysis buffer.
+  - Peak-adaptive hysteresis in JS and C++20 (default on) with 4096-sample analysis buffers.
+- [x] **v0.3.1 hardening (2026-09-04)**:
+  - Deterministic tap wire ids (`registerTap(..., id)` / `makeSlug`) + `findTapIndex` resolver.
+  - Octave-qualified `detectedNoteName` in C++ (parity with JS contract).
+  - `JuceWebScopeComponent` per-lane tap subscriptions (on-demand activation with all-active fallback).
+  - Real C++ smoke verification in Release (explicit checks, no `assert`), relocated demo to `WebUI/demo/`, Mount refactor, `AnalyserInput.destroy()` fix, version alignment to 0.3.1.
 
 ---
 
@@ -65,7 +65,7 @@ When opening sessions in target projects:
 
 - [README.md](README.md): Quick start and feature summary.
 - [ARCHITECTURE_SPEC.md](ARCHITECTURE_SPEC.md): Full technical specification.
-- [docs/INTEGRATION_GUIDE.md](docs/INTEGRATION_GUIDE.md): 5-minute integration guide.
+- [docs/INTEGRATION_GUIDE.md](docs/INTEGRATION_GUIDE.md): 5-minute integration guide (real C++ API + tap id contract).
 - [docs/USAGE_GUIDE.md](docs/USAGE_GUIDE.md): Developer API manual.
 - [docs/DATA_CONTRACT.md](docs/DATA_CONTRACT.md): Wire protocol & ScopeDataFrame contract.
 - [ROADMAP.md](ROADMAP.md): Detailed phase breakdown and definition of done.

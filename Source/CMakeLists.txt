@@ -7,6 +7,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 add_library(ABDScopeCore INTERFACE)
 
 target_include_directories(ABDScopeCore INTERFACE
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/Core>
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/JUCE>
 )
@@ -16,6 +17,7 @@ target_sources(ABDScopeCore INTERFACE
   ${CMAKE_CURRENT_SOURCE_DIR}/Core/SpscRingBuffer.h
   ${CMAKE_CURRENT_SOURCE_DIR}/Core/ScopeTap.h
   ${CMAKE_CURRENT_SOURCE_DIR}/Core/ScopeDataCollector.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/Core/TapId.h
   ${CMAKE_CURRENT_SOURCE_DIR}/Core/TriggerDetector.h
   ${CMAKE_CURRENT_SOURCE_DIR}/Core/ScopeFrameSerializer.h
   ${CMAKE_CURRENT_SOURCE_DIR}/JUCE/JuceScopeComponent.h
@@ -39,7 +41,7 @@ else()
   target_compile_options(ABDScopeCore INTERFACE -fPIC)
 endif()
 
-set(ABD_SCOPE_VERSION "0.1.0-alpha")
+set(ABD_SCOPE_VERSION "0.3.1")
 configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/Core/ABDScopeConfig.h.in
   ${CMAKE_CURRENT_BINARY_DIR}/ABDScopeConfig.h

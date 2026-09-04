@@ -1,6 +1,6 @@
 # ABDScope Developer & API Usage Guide
 
-> **Version:** 0.1.0  
+> **Version:** 0.3.1  
 > **Module:** `@abdsynths/scope`
 
 ---
@@ -54,7 +54,7 @@ const scope = createScope({
 | `title` | `string` | `'ABDScope'` | Modal title in header |
 | `availableTaps` | `Array<{id, name}>` | `[{ id: 'master', name: 'Master Out' }]` | Multi-tap telemetry probe list from synth |
 | `defaultTap` | `string` | `'master'` | Initial selected tap ID |
-| `onTapChange` | `(tapId: string, laneIdx: number) => void` | `noop` | Callback triggered when user changes active tap probe in a lane |
+| `onTapChange` | `(tapId: string, laneIdx: number) => void` | `noop` | Callback triggered when a lane subscribes to a tap probe (on mount, layout change, or user change) — notify the C++ bridge so only needed taps stay active |
 | `onModeSelect` | `(mode: string, laneIdx: number) => void` | `noop` | Callback triggered when user changes mode in a lane |
 | `onClose` | `() => void` | `noop` | Callback when floating modal is closed |
 
