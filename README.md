@@ -72,6 +72,15 @@ ABDScope/
 
 ## ⚡ Quick Start
 
+### 0. Install JavaScript Dependencies (two committed lockfiles)
+The repo keeps **two self-contained npm toolchains** — repo root (`Vitest` suite over `WebUI/tests`, happy-dom) and `WebUI/` (jsdom suite + demo server). Each has its own committed `package-lock.json`, so install deterministically with `npm ci`:
+
+```cmd
+npm ci
+cd WebUI && npm ci
+cd ..
+```
+
 ### 1. Build and Run All Tests (C++ MSVC & Vitest)
 ```cmd
 build.bat

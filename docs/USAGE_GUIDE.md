@@ -120,3 +120,15 @@ ABDScope automatically adapts to host theme tokens or explicit data-attributes:
 <!-- Applies AudioLab Emerald Theme -->
 <body data-theme="audiolab">
 ```
+
+---
+
+## 6. Debugging & Telemetry Logs
+
+- The production embedded host page (`WebUI/index.html`) is **silent by default**: IPC parsing errors are only logged when the host enables the debug gate **before** the page script runs:
+
+```html
+<script>window.__ABDSCOPE_DEBUG__ = true;</script>
+```
+
+- The only other `console.log` output in the project lives in the **demo harness** (`WebUI/demo/index.html`), which is a standalone test bed and is never bundled into production assets (see `docs/INTEGRATION_GUIDE.md` §7).

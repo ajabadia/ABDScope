@@ -27,6 +27,12 @@
 - **Styling**: CSS Custom Properties only (`--scope-bg`, `--color-accent`, etc.).
 - **Memory Safety**: No allocations in audio thread, explicit `destroy()` for all event listeners, rAF, observers, and nodes.
 
+### Intentional Conventions (do not "clean up")
+
+- **Two self-contained Vitest toolchains**: repo-root `vitest.config.js` (happy-dom over `WebUI/tests`) and `WebUI/vitest.config.js` (jsdom, package-scoped) each serve a different consumer layout; both must stay green. Their `package-lock.json` files are committed — install with `npm ci`, never `npm install`.
+- **UTF-8 BOM + CRLF are preserved** in the docs that ship with them (`docs/INTEGRATION_GUIDE.md`, `docs/DATA_CONTRACT.md`, `CHANGELOG.md`): MSVC/Windows tooling friendly. Do not strip BOMs or convert EOLs in unrelated commits.
+- **Console output policy**: `console.log` is allowed only in the dev demo harness (`WebUI/demo/`); the production host page (`WebUI/index.html`) is silent unless the host sets `window.__ABDSCOPE_DEBUG__ = true` before load.
+
 ---
 
 ## 3. Milestones Accomplished

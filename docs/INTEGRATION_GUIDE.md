@@ -330,7 +330,7 @@ private:
 When embedding `ABDScope` inside a plugin or application using WebView2 without spinning up an HTTP server, keep these architectural rules in mind:
 
 ### 7.1. Embedded Telemetry (`WebUI/index.html`) vs. Browser Demo (`WebUI/demo/`)
-- **`WebUI/index.html` (Production Embedded Scope)**: Contains only the multi-lane canvas visualizer (`EmbeddedMount`), listening to C++ IPC via `window.__pushScopeFrame` and message events. It fills 100% of the viewport and does NOT include any signal generators or local Web Audio controls.
+- **`WebUI/index.html` (Production Embedded Scope)**: Contains only the multi-lane canvas visualizer (`EmbeddedMount`), listening to C++ IPC via `window.__pushScopeFrame` and message events. It fills 100% of the viewport and does NOT include any signal generators or local Web Audio controls. The page is silent by default: to surface IPC parsing errors in the WebView host console, evaluate `window.__ABDSCOPE_DEBUG__ = true;` before loading it (see `docs/USAGE_GUIDE.md` §6).
 - **`WebUI/demo/` (Browser Sandbox Only)**: A standalone browser testbed containing synthetic Web Audio API oscillators and GUI sliders. **NEVER bundle `WebUI/demo/*` into `juce_add_binary_data`**, otherwise duplicate `index.html` entries will collide in C++ binary data and overwrite the production embedded view.
 
 ### 7.2. CMake Binary Assets Packaging Pattern
