@@ -463,6 +463,19 @@ juce_add_plugin(MyPlugin
 target_link_libraries(MyPlugin PRIVATE ABDScope::ABDScopeCore)
 ```
 
+> **⚠ Compile-time requirement verified against JUCE 8.0.12:** the WebView2 SDK headers are loaded through JUCE's own `FindWebView2.cmake`, which searches for a local `Microsoft.Web.WebView2` NuGet package (default: `%USERPROFILE%\AppData\Local\PackageManagement\NuGet\Packages`). Install it with:
+> ```powershell
+> Install-Package Microsoft.Web.WebView2 -Scope CurrentUser -Source nugetRepository
+> ```
+>
+> In addition, `juce_gui_extra` defaults `JUCE_USE_WIN_WEBVIEW2` to `0`, and `WebBrowserComponent::Options::withResourceProvider` (which `JuceWebScopeComponent` relies on) is only compiled when that macro is `1`. Define it on the consuming target **before** any JUCE module header is included:
+> ```cmake
+> target_compile_definitions(MyPlugin PRIVATE JUCE_USE_WIN_WEBVIEW2=1)
+> ```
+> Without both the NuGet package and this macro the component fails to compile (`withResourceProvider is not a member of juce::WebBrowserComponent::Options`).
+> 
+> Verified in this repository: `JuceWebScopeComponent.h` and `ScopeResourceProvider.cpp` compile clean with MSVC + JUCE 8.0.12 + WebView2 SDK when the macro is defined.
+
 ---
 
 ## 10. Tap Routing Contracts & Wire Protocol Best Practices
